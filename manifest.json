@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "単語 Highlighter",
+  "version": "1.0",
+  "description": "Highlight Japanese words you don’t know.",
+  "permissions": ["storage"],
+  "icons": {
+    "16": "icon/16.png",
+    "32": "icon/32.png",
+    "48": "icon/48.png",
+    "128": "icon/128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon/16.png",
+      "32": "icon/32.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.aozora.gr.jp/*"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ]
+}
