@@ -68,17 +68,11 @@
       </div>
       <div class="input-container">
         <label for="searchEngine">Search engine</label>
-        <select id="searchEngine">
-          <option value="google">Google</option>
-          <option value="google-japan">Google Japan</option>
-          <option value="duckduckgo">DuckDuckGo</option>
-          <option value="bing">Bing</option>
-          <option value="yahoo-japan">Yahoo! Japan</option>
-          <option value="goo">goo</option>
-          <option value="baidu">Baidu</option>
-          <option value="sogou">Sogou</option>
-          <option value="brave">Brave Search</option>
-        </select>
+        <select id="searchEngine"></select>
+      </div>
+      <div class="input-container">
+        <label for="searchKeyword">Search keyword</label>
+        <input type="text" id="searchKeyword" placeholder="読み方" />
       </div>
       <div class="input-container">
         <label for="overlayColor">Overlay color</label>
@@ -97,6 +91,7 @@
     <button id="clearAllBtn">Clear all</button>
 
     <script src="default-known-words.js"></script>
+    <script src="search-engines.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

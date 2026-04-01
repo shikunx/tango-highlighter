@@ -2,11 +2,12 @@ const clickActionStorageKey = "clickAction";
 const doubleClickActionStorageKey = "doubleClickAction";
 const overlayColorStorageKey = "overlayColor";
 const searchEngineStorageKey = "searchEngine";
+const searchKeywordStorageKey = "searchKeyword";
 const enabledHostsStorageKey = "enabledHosts";
 const defaultClickAction = "search-reading";
 const defaultDoubleClickAction = "mark-known";
 const defaultOverlayColor = "#f87171";
-const defaultSearchEngine = "google";
+const defaultSearchKeyword = "読み方";
 
 let currentTabHost = null;
 
@@ -36,6 +37,7 @@ function loadInteractionSettings(callback) {
       doubleClickActionStorageKey,
       overlayColorStorageKey,
       searchEngineStorageKey,
+      searchKeywordStorageKey,
     ],
     function (result) {
       callback({
@@ -44,9 +46,22 @@ function loadInteractionSettings(callback) {
           result[doubleClickActionStorageKey] || defaultDoubleClickAction,
         overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
         searchEngine: result[searchEngineStorageKey] || defaultSearchEngine,
+        searchKeyword: result[searchKeywordStorageKey] || defaultSearchKeyword,
       });
     }
   );
+}
+
+function renderSearchEngineOptions() {
+  const searchEngineSelect = document.getElementById("searchEngine");
+  searchEngineSelect.innerHTML = "";
+
+  searchEngineOptions.forEach(function (option) {
+    const optionElement = document.createElement("option");
+    optionElement.value = option.value;
+    optionElement.textContent = option.label;
+    searchEngineSelect.appendChild(optionElement);
+  });
 }
 
 function loadEnabledHosts(callback) {
@@ -112,6 +127,7 @@ function saveInteractionSettings() {
   const doubleClickAction = document.getElementById("doubleClickAction").value;
   const overlayColor = document.getElementById("overlayColor").value;
   const searchEngine = document.getElementById("searchEngine").value;
+  const searchKeyword = document.getElementById("searchKeyword").value.trim();
 
   chrome.storage.local.set(
     {
@@ -119,11 +135,10 @@ function saveInteractionSettings() {
       [doubleClickActionStorageKey]: doubleClickAction,
       [overlayColorStorageKey]: overlayColor,
       [searchEngineStorageKey]: searchEngine,
+      [searchKeywordStorageKey]: searchKeyword || defaultSearchKeyword,
     },
     function () {
-      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: "updateHighlight" });
-      });
+      notifyActiveTab();
     }
   );
 }
@@ -134,6 +149,7 @@ function loadSettings() {
     document.getElementById("doubleClickAction").value =
       settings.doubleClickAction;
     document.getElementById("searchEngine").value = settings.searchEngine;
+    document.getElementById("searchKeyword").value = settings.searchKeyword;
     document.getElementById("overlayColor").value = settings.overlayColor;
   });
 }
@@ -205,7 +221,15 @@ function notifyActiveTab() {
       return;
     }
 
-    chrome.tabs.sendMessage(tabs[0].id, { action: "updateHighlight" });
+    chrome.tabs.sendMessage(
+      tabs[0].id,
+      { action: "updateHighlight" },
+      function () {
+        if (chrome.runtime.lastError) {
+          return;
+        }
+      }
+    );
   });
 }
 
@@ -295,6 +319,7 @@ document
   .getElementById("doubleClickAction")
   .addEventListener("change", saveInteractionSettings);
 document.getElementById("searchEngine").addEventListener("change", saveInteractionSettings);
+document.getElementById("searchKeyword").addEventListener("input", saveInteractionSettings);
 document.getElementById("overlayColor").addEventListener("input", saveInteractionSettings);
 document.getElementById("importBtn").addEventListener("click", function () {
   document.getElementById("importFileInput").click();
@@ -305,6 +330,7 @@ document
 document.getElementById("exportBtn").addEventListener("click", exportWords);
 document.getElementById("clearAllBtn").addEventListener("click", clearAllWords);
 
+renderSearchEngineOptions();
 loadWords();
 loadSettings();
 loadCurrentSite();

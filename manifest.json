@@ -20,7 +20,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["default-known-words.js", "content.js"],
+      "js": ["default-known-words.js", "search-engines.js", "content.js"],
       "css": ["content.css"]
     }
   ]
