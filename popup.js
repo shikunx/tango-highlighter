@@ -1,7 +1,9 @@
 const clickActionStorageKey = "clickAction";
 const doubleClickActionStorageKey = "doubleClickAction";
+const overlayColorStorageKey = "overlayColor";
 const defaultClickAction = "search-reading";
 const defaultDoubleClickAction = "mark-known";
+const defaultOverlayColor = "#f87171";
 
 function loadStoredWords(callback) {
   chrome.storage.local.get(["knownWords", "knownWordsInitialized"], function (result) {
@@ -24,12 +26,13 @@ function loadStoredWords(callback) {
 
 function loadInteractionSettings(callback) {
   chrome.storage.local.get(
-    [clickActionStorageKey, doubleClickActionStorageKey],
+    [clickActionStorageKey, doubleClickActionStorageKey, overlayColorStorageKey],
     function (result) {
       callback({
         clickAction: result[clickActionStorageKey] || defaultClickAction,
         doubleClickAction:
           result[doubleClickActionStorageKey] || defaultDoubleClickAction,
+        overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
       });
     }
   );
@@ -38,11 +41,13 @@ function loadInteractionSettings(callback) {
 function saveInteractionSettings() {
   const clickAction = document.getElementById("clickAction").value;
   const doubleClickAction = document.getElementById("doubleClickAction").value;
+  const overlayColor = document.getElementById("overlayColor").value;
 
   chrome.storage.local.set(
     {
       [clickActionStorageKey]: clickAction,
       [doubleClickActionStorageKey]: doubleClickAction,
+      [overlayColorStorageKey]: overlayColor,
     },
     function () {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -57,6 +62,7 @@ function loadSettings() {
     document.getElementById("clickAction").value = settings.clickAction;
     document.getElementById("doubleClickAction").value =
       settings.doubleClickAction;
+    document.getElementById("overlayColor").value = settings.overlayColor;
   });
 }
 
@@ -211,6 +217,7 @@ document.getElementById("clickAction").addEventListener("change", saveInteractio
 document
   .getElementById("doubleClickAction")
   .addEventListener("change", saveInteractionSettings);
+document.getElementById("overlayColor").addEventListener("input", saveInteractionSettings);
 document.getElementById("importBtn").addEventListener("click", function () {
   document.getElementById("importFileInput").click();
 });

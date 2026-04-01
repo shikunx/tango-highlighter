@@ -2,12 +2,15 @@ let knownWords = [];
 let interactionSettings = {
   clickAction: "search-reading",
   doubleClickAction: "mark-known",
+  overlayColor: "#f87171",
 };
 
 const clickActionStorageKey = "clickAction";
 const doubleClickActionStorageKey = "doubleClickAction";
+const overlayColorStorageKey = "overlayColor";
 const defaultClickAction = "search-reading";
 const defaultDoubleClickAction = "mark-known";
+const defaultOverlayColor = "#f87171";
 
 const unknownWordClassName = "vocab-unknown";
 const overlayClassName = "vocab-overlay";
@@ -36,12 +39,13 @@ function loadKnownWords(callback) {
 
 function loadInteractionSettings(callback) {
   chrome.storage.local.get(
-    [clickActionStorageKey, doubleClickActionStorageKey],
+    [clickActionStorageKey, doubleClickActionStorageKey, overlayColorStorageKey],
     function (result) {
       interactionSettings = {
         clickAction: result[clickActionStorageKey] || defaultClickAction,
         doubleClickAction:
           result[doubleClickActionStorageKey] || defaultDoubleClickAction,
+        overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
       };
       if (callback) callback();
     }
@@ -141,6 +145,7 @@ function removeOverlay() {
 function createOverlay() {
   const overlay = document.createElement("div");
   overlay.className = overlayClassName;
+  overlay.style.setProperty("--vocab-overlay-color", interactionSettings.overlayColor);
   document.body.appendChild(overlay);
   return overlay;
 }
@@ -266,7 +271,8 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
   if (
     !changes.knownWords &&
     !changes[clickActionStorageKey] &&
-    !changes[doubleClickActionStorageKey]
+    !changes[doubleClickActionStorageKey] &&
+    !changes[overlayColorStorageKey]
   ) {
     return;
   }

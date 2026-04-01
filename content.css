@@ -3,14 +3,15 @@
   inset: 0;
   pointer-events: none;
   z-index: 2147483647;
+  --vocab-overlay-color: #f87171;
 }
 
 .vocab-unknown {
   position: absolute;
   margin: 0;
   padding: 0;
-  border: 1px solid rgba(248, 113, 113, 0.45);
-  background: rgba(248, 113, 113, 0.18);
+  border: 1px solid color-mix(in srgb, var(--vocab-overlay-color) 45%, transparent);
+  background: color-mix(in srgb, var(--vocab-overlay-color) 18%, transparent);
   border-radius: 2px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
   cursor: pointer;
