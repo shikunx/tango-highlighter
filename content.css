@@ -1,4 +1,22 @@
+.vocab-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2147483647;
+}
+
 .vocab-unknown {
-  border-bottom: thin solid red;
-  margin: 0 1px;
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid rgba(220, 38, 38, 0.95);
+  background: rgba(248, 113, 113, 0.18);
+  border-radius: 2px;
+  cursor: pointer;
+  pointer-events: auto;
+  appearance: none;
+  -webkit-appearance: none;
+  color: transparent;
+  overflow: hidden;
 }

@@ -1,6 +1,8 @@
 let knownWords = [];
 
-const unknownWorkdClassName = "vocab-unknown";
+const unknownWordClassName = "vocab-unknown";
+const overlayClassName = "vocab-overlay";
+const segmenter = new Intl.Segmenter("ja", { granularity: "word" });
 
 function loadKnownWords(callback) {
   chrome.storage.local.get(["knownWords"], function (result) {
@@ -13,156 +15,167 @@ function isKnownWord(word) {
   return knownWords.includes(word);
 }
 
-function highlightUnknownWords() {
-  const highlightedElements = document.querySelectorAll(
-    `.${unknownWorkdClassName}`
+function isJapaneseWord(word) {
+  return /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u.test(word);
+}
+
+function isIgnorableElement(element) {
+  const tagName = element.tagName;
+  return (
+    tagName === "SCRIPT" ||
+    tagName === "STYLE" ||
+    tagName === "NOSCRIPT" ||
+    tagName === "IFRAME"
   );
-  highlightedElements.forEach((el) => {
-    const parent = el.parentNode;
-    if (parent) {
-      parent.replaceChild(document.createTextNode(el.textContent), el);
-      parent.normalize();
+}
+
+function shouldProcessTextNode(node) {
+  if (!node.parentElement) return false;
+  if (node.parentElement.closest(`.${overlayClassName}`)) return false;
+  if (isIgnorableElement(node.parentElement)) return false;
+  if (!node.textContent.trim()) return false;
+  return true;
+}
+
+function collectTextNodes(root) {
+  const textNodes = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: function (node) {
+      return shouldProcessTextNode(node)
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT;
+    },
+  });
+
+  let node;
+  while ((node = walker.nextNode())) {
+    textNodes.push(node);
+  }
+
+  return textNodes;
+}
+
+function collectUnknownTokens(root) {
+  const textNodes = collectTextNodes(root);
+  const tokens = [];
+
+  textNodes.forEach(function (textNode) {
+    const text = textNode.textContent;
+    const segments = segmenter.segment(text);
+    let currentOffset = 0;
+
+    for (const segment of segments) {
+      const word = segment.segment;
+      const startOffset = currentOffset;
+      const endOffset = startOffset + word.length;
+      currentOffset = endOffset;
+
+      if (!word.trim()) {
+        continue;
+      }
+
+      if (!isJapaneseWord(word)) {
+        continue;
+      }
+
+      if (isKnownWord(word)) {
+        continue;
+      }
+
+      tokens.push({
+        word: word,
+        node: textNode,
+        startOffset: startOffset,
+        endOffset: endOffset,
+      });
     }
   });
 
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode: function (node) {
-        if (!node.parentElement) return NodeFilter.FILTER_REJECT;
-        const tagName = node.parentElement.tagName;
-        if (
-          tagName === "SCRIPT" ||
-          tagName === "STYLE" ||
-          tagName === "NOSCRIPT" ||
-          tagName === "IFRAME"
-        ) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        if (node.parentElement.classList.contains("vocab-unknown")) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        if (!node.textContent.trim()) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        return NodeFilter.FILTER_ACCEPT;
-      },
-    }
-  );
-
-  const nodesToProcess = [];
-  let node;
-  let nodeCount = 0;
-  const MAX_NODES = 5000;
-
-  while ((node = walker.nextNode()) && nodeCount < MAX_NODES) {
-    nodesToProcess.push(node);
-    nodeCount++;
-  }
-
-  const BATCH_SIZE = 50;
-  let currentIndex = 0;
-
-  function processBatch() {
-    const endIndex = Math.min(currentIndex + BATCH_SIZE, nodesToProcess.length);
-
-    for (let i = currentIndex; i < endIndex; i++) {
-      processTextNode(nodesToProcess[i]);
-    }
-
-    currentIndex = endIndex;
-
-    if (currentIndex < nodesToProcess.length) {
-      if (window.requestIdleCallback) {
-        requestIdleCallback(processBatch, { timeout: 1000 });
-      } else {
-        setTimeout(processBatch, 0);
-      }
-    }
-  }
-
-  processBatch();
+  return tokens;
 }
 
-function processTextNode(textNode) {
-  if (!textNode.parentNode) return;
-  const text = textNode.textContent;
-  const segmenter = new Intl.Segmenter("ja", { granularity: "word" });
-  const segments = segmenter.segment(text);
-  const words = Array.from(segments, (segment) => segment.segment);
-  if (!words) return;
-  console.log(words);
+function removeOverlay() {
+  const existingOverlay = document.querySelector(`.${overlayClassName}`);
+  if (existingOverlay) {
+    existingOverlay.remove();
+  }
+}
 
-  let hasUnknown = false;
-  for (let word of words) {
-    if (!isKnownWord(word)) {
-      hasUnknown = true;
-      break;
+function createOverlay() {
+  const overlay = document.createElement("div");
+  overlay.className = overlayClassName;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function createHighlightBoxes(token, overlay) {
+  const range = document.createRange();
+  range.setStart(token.node, token.startOffset);
+  range.setEnd(token.node, token.endOffset);
+
+  const rects = Array.from(range.getClientRects());
+  rects.forEach(function (rect) {
+    if (rect.width === 0 || rect.height === 0) {
+      return;
     }
-  }
 
-  if (!hasUnknown) return;
+    const box = document.createElement("button");
+    box.type = "button";
+    box.className = unknownWordClassName;
+    box.dataset.word = token.word;
+    box.style.left = `${window.scrollX + rect.left}px`;
+    box.style.top = `${window.scrollY + rect.top}px`;
+    box.style.width = `${rect.width}px`;
+    box.style.height = `${rect.height}px`;
+    box.title = `Mark \"${token.word}\" as known`;
+    box.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      addToKnownWords(token.word);
+    });
+    overlay.appendChild(box);
+  });
+}
 
-  const fragment = document.createDocumentFragment();
+function renderHighlights() {
+  removeOverlay();
 
-  for (let word of words) {
-    if (isKnownWord(word) || !word.trim().replace(/[\x00-\x7F]/g, "")) {
-      fragment.appendChild(document.createTextNode(word));
-    } else {
-      const span = document.createElement("span");
-      span.className = "vocab-unknown";
-      span.textContent = word;
-      span.style.cursor = "pointer";
-      span.title = "点击标记为已认识";
-      span.addEventListener("click", function (e) {
-        e.preventDefault();
-        addToKnownWords(word);
-      });
-      fragment.appendChild(span);
-    }
-  }
+  const overlay = createOverlay();
+  const tokens = collectUnknownTokens(document.body);
 
-  if (textNode.parentNode) {
-    textNode.parentNode.replaceChild(fragment, textNode);
-  }
+  tokens.forEach(function (token) {
+    createHighlightBoxes(token, overlay);
+  });
 }
 
 function addToKnownWords(word) {
   chrome.storage.local.get(["knownWords"], function (result) {
     const words = result.knownWords || [];
-    if (!words.includes(word)) {
-      words.push(word);
-      chrome.storage.local.set({ knownWords: words }, function () {
-        knownWords = words;
-        highlightUnknownWords();
-      });
+    if (words.includes(word)) {
+      return;
     }
+
+    words.push(word);
+    chrome.storage.local.set({ knownWords: words }, function () {
+      knownWords = words;
+      renderHighlights();
+    });
   });
 }
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "updateHighlight") {
-    loadKnownWords(highlightUnknownWords);
+    loadKnownWords(renderHighlights);
   }
 });
 
 loadKnownWords(function () {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", highlightUnknownWords);
+    document.addEventListener("DOMContentLoaded", renderHighlights);
   } else {
-    highlightUnknownWords();
+    renderHighlights();
   }
 });
 
-const observer = new MutationObserver(function (mutations) {
-  let shouldUpdate = false;
-  mutations.forEach(function (mutation) {
-    if (mutation.addedNodes.length > 0) {
-      shouldUpdate = true;
-    }
-  });
-  if (shouldUpdate) {
-    highlightUnknownWords();
-  }
-});
+window.addEventListener("resize", renderHighlights);
+window.addEventListener("scroll", renderHighlights, { passive: true });
