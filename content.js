@@ -3,16 +3,19 @@ let interactionSettings = {
   clickAction: "search-reading",
   doubleClickAction: "mark-known",
   overlayColor: "#f87171",
+  searchEngine: "google",
 };
 let isSiteEnabled = false;
 
 const clickActionStorageKey = "clickAction";
 const doubleClickActionStorageKey = "doubleClickAction";
 const overlayColorStorageKey = "overlayColor";
+const searchEngineStorageKey = "searchEngine";
 const enabledHostsStorageKey = "enabledHosts";
 const defaultClickAction = "search-reading";
 const defaultDoubleClickAction = "mark-known";
 const defaultOverlayColor = "#f87171";
+const defaultSearchEngine = "google";
 
 const unknownWordClassName = "vocab-unknown";
 const overlayClassName = "vocab-overlay";
@@ -41,13 +44,19 @@ function loadKnownWords(callback) {
 
 function loadInteractionSettings(callback) {
   chrome.storage.local.get(
-    [clickActionStorageKey, doubleClickActionStorageKey, overlayColorStorageKey],
+    [
+      clickActionStorageKey,
+      doubleClickActionStorageKey,
+      overlayColorStorageKey,
+      searchEngineStorageKey,
+    ],
     function (result) {
       interactionSettings = {
         clickAction: result[clickActionStorageKey] || defaultClickAction,
         doubleClickAction:
           result[doubleClickActionStorageKey] || defaultDoubleClickAction,
         overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
+        searchEngine: result[searchEngineStorageKey] || defaultSearchEngine,
       };
       if (callback) callback();
     }
@@ -160,11 +169,46 @@ function createOverlay() {
   return overlay;
 }
 
-function openGoogleSearch(word) {
-  window.open(
-    `https://www.google.com/search?q=${encodeURIComponent(`${word} 読み方`)}`,
-    "_blank"
-  );
+function buildSearchUrl(word) {
+  const query = encodeURIComponent(`${word} 読み方`);
+
+  if (interactionSettings.searchEngine === "google-japan") {
+    return `https://www.google.co.jp/search?q=${query}`;
+  }
+
+  if (interactionSettings.searchEngine === "duckduckgo") {
+    return `https://duckduckgo.com/?q=${query}`;
+  }
+
+  if (interactionSettings.searchEngine === "bing") {
+    return `https://www.bing.com/search?q=${query}`;
+  }
+
+  if (interactionSettings.searchEngine === "yahoo-japan") {
+    return `https://search.yahoo.co.jp/search?p=${query}`;
+  }
+
+  if (interactionSettings.searchEngine === "goo") {
+    return `https://search.goo.ne.jp/web.jsp?MT=${query}`;
+  }
+
+  if (interactionSettings.searchEngine === "baidu") {
+    return `https://www.baidu.com/s?wd=${query}`;
+  }
+
+  if (interactionSettings.searchEngine === "sogou") {
+    return `https://www.sogou.com/web?query=${query}`;
+  }
+
+  if (interactionSettings.searchEngine === "brave") {
+    return `https://search.brave.com/search?q=${query}`;
+  }
+
+  return `https://www.google.com/search?q=${query}`;
+}
+
+function openSearch(word) {
+  window.open(buildSearchUrl(word), "_blank");
 }
 
 function getActionLabel(action, word) {
@@ -181,7 +225,7 @@ function runAction(action, word) {
     return;
   }
 
-  openGoogleSearch(word);
+  openSearch(word);
 }
 
 function createHighlightBoxes(token, overlay) {
@@ -211,6 +255,10 @@ function createHighlightBoxes(token, overlay) {
       interactionSettings.doubleClickAction,
       token.word
     )}`;
+    box.addEventListener("mousedown", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    });
     box.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -289,6 +337,7 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
     !changes[clickActionStorageKey] &&
     !changes[doubleClickActionStorageKey] &&
     !changes[overlayColorStorageKey] &&
+    !changes[searchEngineStorageKey] &&
     !changes[enabledHostsStorageKey]
   ) {
     return;

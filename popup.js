@@ -1,10 +1,12 @@
 const clickActionStorageKey = "clickAction";
 const doubleClickActionStorageKey = "doubleClickAction";
 const overlayColorStorageKey = "overlayColor";
+const searchEngineStorageKey = "searchEngine";
 const enabledHostsStorageKey = "enabledHosts";
 const defaultClickAction = "search-reading";
 const defaultDoubleClickAction = "mark-known";
 const defaultOverlayColor = "#f87171";
+const defaultSearchEngine = "google";
 
 let currentTabHost = null;
 
@@ -29,13 +31,19 @@ function loadStoredWords(callback) {
 
 function loadInteractionSettings(callback) {
   chrome.storage.local.get(
-    [clickActionStorageKey, doubleClickActionStorageKey, overlayColorStorageKey],
+    [
+      clickActionStorageKey,
+      doubleClickActionStorageKey,
+      overlayColorStorageKey,
+      searchEngineStorageKey,
+    ],
     function (result) {
       callback({
         clickAction: result[clickActionStorageKey] || defaultClickAction,
         doubleClickAction:
           result[doubleClickActionStorageKey] || defaultDoubleClickAction,
         overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
+        searchEngine: result[searchEngineStorageKey] || defaultSearchEngine,
       });
     }
   );
@@ -103,12 +111,14 @@ function saveInteractionSettings() {
   const clickAction = document.getElementById("clickAction").value;
   const doubleClickAction = document.getElementById("doubleClickAction").value;
   const overlayColor = document.getElementById("overlayColor").value;
+  const searchEngine = document.getElementById("searchEngine").value;
 
   chrome.storage.local.set(
     {
       [clickActionStorageKey]: clickAction,
       [doubleClickActionStorageKey]: doubleClickAction,
       [overlayColorStorageKey]: overlayColor,
+      [searchEngineStorageKey]: searchEngine,
     },
     function () {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -123,6 +133,7 @@ function loadSettings() {
     document.getElementById("clickAction").value = settings.clickAction;
     document.getElementById("doubleClickAction").value =
       settings.doubleClickAction;
+    document.getElementById("searchEngine").value = settings.searchEngine;
     document.getElementById("overlayColor").value = settings.overlayColor;
   });
 }
@@ -283,6 +294,7 @@ document.getElementById("clickAction").addEventListener("change", saveInteractio
 document
   .getElementById("doubleClickAction")
   .addEventListener("change", saveInteractionSettings);
+document.getElementById("searchEngine").addEventListener("change", saveInteractionSettings);
 document.getElementById("overlayColor").addEventListener("input", saveInteractionSettings);
 document.getElementById("importBtn").addEventListener("click", function () {
   document.getElementById("importFileInput").click();
