@@ -1,3 +1,8 @@
+const clickActionStorageKey = "clickAction";
+const doubleClickActionStorageKey = "doubleClickAction";
+const defaultClickAction = "search-reading";
+const defaultDoubleClickAction = "mark-known";
+
 const defaultKnownWords = [
   "あ",
   "か",
@@ -63,6 +68,44 @@ function loadStoredWords(callback) {
         callback([...defaultKnownWords]);
       }
     );
+  });
+}
+
+function loadInteractionSettings(callback) {
+  chrome.storage.local.get(
+    [clickActionStorageKey, doubleClickActionStorageKey],
+    function (result) {
+      callback({
+        clickAction: result[clickActionStorageKey] || defaultClickAction,
+        doubleClickAction:
+          result[doubleClickActionStorageKey] || defaultDoubleClickAction,
+      });
+    }
+  );
+}
+
+function saveInteractionSettings() {
+  const clickAction = document.getElementById("clickAction").value;
+  const doubleClickAction = document.getElementById("doubleClickAction").value;
+
+  chrome.storage.local.set(
+    {
+      [clickActionStorageKey]: clickAction,
+      [doubleClickActionStorageKey]: doubleClickAction,
+    },
+    function () {
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: "updateHighlight" });
+      });
+    }
+  );
+}
+
+function loadSettings() {
+  loadInteractionSettings(function (settings) {
+    document.getElementById("clickAction").value = settings.clickAction;
+    document.getElementById("doubleClickAction").value =
+      settings.doubleClickAction;
   });
 }
 
@@ -151,6 +194,11 @@ document.getElementById("wordInput").addEventListener("keypress", function (e) {
     addWord();
   }
 });
+document.getElementById("clickAction").addEventListener("change", saveInteractionSettings);
+document
+  .getElementById("doubleClickAction")
+  .addEventListener("change", saveInteractionSettings);
 document.getElementById("clearAllBtn").addEventListener("click", clearAllWords);
 
 loadWords();
+loadSettings();

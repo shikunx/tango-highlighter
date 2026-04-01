@@ -36,13 +36,31 @@
     </style>
   </head>
   <body>
-    <h2>List of known 単語</h2>
+    <h2>Known words</h2>
     <div class="input-container">
-      <input type="text" id="wordInput" placeholder="Enter known vocabulary" />
+      <input type="text" id="wordInput" placeholder="Enter a known word" />
       <button id="addBtn">Add</button>
     </div>
 
-    <div>Total: <strong id="wordCount">0</strong> (Click to delete)</div>
+    <div>Total: <strong id="wordCount">0</strong> (Click a word to delete)</div>
+
+    <div>
+      <h2>Actions</h2>
+      <div class="input-container">
+        <label for="clickAction">Click</label>
+        <select id="clickAction">
+          <option value="search-reading">Search reading</option>
+          <option value="mark-known">Mark as known</option>
+        </select>
+      </div>
+      <div class="input-container">
+        <label for="doubleClickAction">Double-click</label>
+        <select id="doubleClickAction">
+          <option value="search-reading">Search reading</option>
+          <option value="mark-known">Mark as known</option>
+        </select>
+      </div>
+    </div>
 
     <div id="wordList"></div>
 

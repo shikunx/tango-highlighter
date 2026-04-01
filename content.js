@@ -1,4 +1,13 @@
 let knownWords = [];
+let interactionSettings = {
+  clickAction: "search-reading",
+  doubleClickAction: "mark-known",
+};
+
+const clickActionStorageKey = "clickAction";
+const doubleClickActionStorageKey = "doubleClickAction";
+const defaultClickAction = "search-reading";
+const defaultDoubleClickAction = "mark-known";
 
 const defaultKnownWords = [
   "あ",
@@ -72,6 +81,20 @@ function loadKnownWords(callback) {
       }
     );
   });
+}
+
+function loadInteractionSettings(callback) {
+  chrome.storage.local.get(
+    [clickActionStorageKey, doubleClickActionStorageKey],
+    function (result) {
+      interactionSettings = {
+        clickAction: result[clickActionStorageKey] || defaultClickAction,
+        doubleClickAction:
+          result[doubleClickActionStorageKey] || defaultDoubleClickAction,
+      };
+      if (callback) callback();
+    }
+  );
 }
 
 function isKnownWord(word) {
@@ -171,6 +194,30 @@ function createOverlay() {
   return overlay;
 }
 
+function openGoogleSearch(word) {
+  window.open(
+    `https://www.google.com/search?q=${encodeURIComponent(`${word} 読み方`)}`,
+    "_blank"
+  );
+}
+
+function getActionLabel(action, word) {
+  if (action === "mark-known") {
+    return `mark \"${word}\" as known`;
+  }
+
+  return "search reading";
+}
+
+function runAction(action, word) {
+  if (action === "mark-known") {
+    addToKnownWords(word);
+    return;
+  }
+
+  openGoogleSearch(word);
+}
+
 function createHighlightBoxes(token, overlay) {
   const range = document.createRange();
   range.setStart(token.node, token.startOffset);
@@ -183,6 +230,7 @@ function createHighlightBoxes(token, overlay) {
     }
 
     const box = document.createElement("button");
+    let clickTimer = null;
     box.type = "button";
     box.className = unknownWordClassName;
     box.dataset.word = token.word;
@@ -190,11 +238,36 @@ function createHighlightBoxes(token, overlay) {
     box.style.top = `${window.scrollY + rect.top}px`;
     box.style.width = `${rect.width}px`;
     box.style.height = `${rect.height}px`;
-    box.title = `Mark \"${token.word}\" as known`;
+    box.title = `Click: ${getActionLabel(
+      interactionSettings.clickAction,
+      token.word
+    )} | Double-click: ${getActionLabel(
+      interactionSettings.doubleClickAction,
+      token.word
+    )}`;
     box.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      addToKnownWords(token.word);
+
+      if (clickTimer !== null) {
+        clearTimeout(clickTimer);
+      }
+
+      clickTimer = window.setTimeout(function () {
+        clickTimer = null;
+        runAction(interactionSettings.clickAction, token.word);
+      }, 220);
+    });
+    box.addEventListener("dblclick", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (clickTimer !== null) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+      }
+
+      runAction(interactionSettings.doubleClickAction, token.word);
     });
     overlay.appendChild(box);
   });
@@ -228,17 +301,43 @@ function addToKnownWords(word) {
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "updateHighlight") {
-    loadKnownWords(renderHighlights);
+    loadKnownWords(function () {
+      loadInteractionSettings(renderHighlights);
+    });
   }
 });
 
-loadKnownWords(function () {
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", renderHighlights);
-  } else {
-    renderHighlights();
+chrome.storage.onChanged.addListener(function (changes, areaName) {
+  if (areaName !== "local") {
+    return;
   }
+
+  if (
+    !changes.knownWords &&
+    !changes[clickActionStorageKey] &&
+    !changes[doubleClickActionStorageKey]
+  ) {
+    return;
+  }
+
+  loadKnownWords(function () {
+    loadInteractionSettings(renderHighlights);
+  });
 });
+
+function initializeHighlights() {
+  loadKnownWords(function () {
+    loadInteractionSettings(function () {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", renderHighlights);
+      } else {
+        renderHighlights();
+      }
+    });
+  });
+}
+
+initializeHighlights();
 
 window.addEventListener("resize", renderHighlights);
 window.addEventListener("scroll", renderHighlights, { passive: true });
