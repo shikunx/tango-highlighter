@@ -4,9 +4,6 @@
     <meta charset="UTF-8" />
     <style>
       body {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
         padding: 16px;
         margin: 0;
         width: 300px;
@@ -15,80 +12,151 @@
 
       h2 {
         padding: 0;
-        margin: 0;
+        margin: 0 0 12px;
       }
 
-      input {
-        flex: 1;
+      input,
+      select,
+      button {
         font-size: 16px;
+      }
+
+      input[type="text"],
+      select {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .popup {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
 
       .input-container {
         display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .settings-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .setting-row {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        column-gap: 12px;
+        align-items: center;
+      }
+
+      .setting-row label {
+        white-space: nowrap;
+      }
+
+      .site-actions,
+      .secondary-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .known-words-section {
+        gap: 12px;
+      }
+
+      .known-words-header {
+        display: flex;
+        flex-direction: column;
         gap: 8px;
       }
 
       #wordList {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
+      }
+
+      .danger-action {
+        width: 100%;
       }
     </style>
   </head>
   <body>
-    <h2>Known words</h2>
-    <div class="input-container">
-      <input type="text" id="wordInput" placeholder="Enter a known word" />
-      <button id="addBtn">Add</button>
+    <div class="popup">
+      <section class="section">
+        <h2>Site</h2>
+        <div id="siteStatus">Current site: -</div>
+        <div class="site-actions">
+          <button id="toggleSiteBtn">Enable on this site</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Actions</h2>
+        <div class="settings-list">
+          <div class="setting-row">
+            <label for="clickAction">Click</label>
+            <select id="clickAction">
+              <option value="search-reading">Search reading</option>
+              <option value="mark-known">Mark as known</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label for="doubleClickAction">Double-click</label>
+            <select id="doubleClickAction">
+              <option value="search-reading">Search reading</option>
+              <option value="mark-known">Mark as known</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label for="searchEngine">Search engine</label>
+            <select id="searchEngine"></select>
+          </div>
+          <div class="setting-row">
+            <label for="searchKeyword">Search keyword</label>
+            <input type="text" id="searchKeyword" placeholder="読み方" />
+          </div>
+          <div class="setting-row">
+            <label for="overlayColor">Overlay color</label>
+            <input type="color" id="overlayColor" />
+          </div>
+        </div>
+      </section>
+
+      <section class="section known-words-section">
+        <div class="known-words-header">
+          <h2>Known words</h2>
+          <div class="input-container">
+            <input type="text" id="wordInput" placeholder="Enter a known word" />
+            <button id="addBtn">Add</button>
+          </div>
+          <div>Total: <strong id="wordCount">0</strong> (Click a word to delete)</div>
+        </div>
+        <div id="wordList"></div>
+      </section>
+
+      <section class="section">
+        <div class="secondary-actions">
+          <button id="importBtn">Import</button>
+          <button id="exportBtn">Export</button>
+          <input type="file" id="importFileInput" accept="text/plain,.txt" hidden />
+        </div>
+      </section>
+
+      <section class="section">
+        <button id="clearAllBtn" class="danger-action">Clear all</button>
+      </section>
     </div>
-
-    <div>Total: <strong id="wordCount">0</strong> (Click a word to delete)</div>
-
-    <div>
-      <h2>Site</h2>
-      <div id="siteStatus">Current site: -</div>
-      <button id="toggleSiteBtn">Enable on this site</button>
-    </div>
-
-    <div>
-      <h2>Actions</h2>
-      <div class="input-container">
-        <label for="clickAction">Click</label>
-        <select id="clickAction">
-          <option value="search-reading">Search reading</option>
-          <option value="mark-known">Mark as known</option>
-        </select>
-      </div>
-      <div class="input-container">
-        <label for="doubleClickAction">Double-click</label>
-        <select id="doubleClickAction">
-          <option value="search-reading">Search reading</option>
-          <option value="mark-known">Mark as known</option>
-        </select>
-      </div>
-      <div class="input-container">
-        <label for="searchEngine">Search engine</label>
-        <select id="searchEngine"></select>
-      </div>
-      <div class="input-container">
-        <label for="searchKeyword">Search keyword</label>
-        <input type="text" id="searchKeyword" placeholder="読み方" />
-      </div>
-      <div class="input-container">
-        <label for="overlayColor">Overlay color</label>
-        <input type="color" id="overlayColor" />
-      </div>
-    </div>
-
-    <div id="wordList"></div>
-
-    <div class="input-container">
-      <button id="importBtn">Import</button>
-      <button id="exportBtn">Export</button>
-      <input type="file" id="importFileInput" accept="text/plain,.txt" hidden />
-    </div>
-
-    <button id="clearAllBtn">Clear all</button>
 
     <script src="default-known-words.js"></script>
     <script src="search-engines.js"></script>
