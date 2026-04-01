@@ -1,9 +1,12 @@
 const clickActionStorageKey = "clickAction";
 const doubleClickActionStorageKey = "doubleClickAction";
 const overlayColorStorageKey = "overlayColor";
+const enabledHostsStorageKey = "enabledHosts";
 const defaultClickAction = "search-reading";
 const defaultDoubleClickAction = "mark-known";
 const defaultOverlayColor = "#f87171";
+
+let currentTabHost = null;
 
 function loadStoredWords(callback) {
   chrome.storage.local.get(["knownWords", "knownWordsInitialized"], function (result) {
@@ -36,6 +39,64 @@ function loadInteractionSettings(callback) {
       });
     }
   );
+}
+
+function loadEnabledHosts(callback) {
+  chrome.storage.local.get([enabledHostsStorageKey], function (result) {
+    callback(result[enabledHostsStorageKey] || []);
+  });
+}
+
+function loadCurrentSite() {
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    const activeTab = tabs[0];
+    if (!activeTab || !activeTab.url) {
+      document.getElementById("siteStatus").textContent = "Current site: unavailable";
+      document.getElementById("toggleSiteBtn").disabled = true;
+      return;
+    }
+
+    const url = new URL(activeTab.url);
+    if (!url.hostname) {
+      document.getElementById("siteStatus").textContent = "Current site: unsupported";
+      document.getElementById("toggleSiteBtn").disabled = true;
+      return;
+    }
+
+    currentTabHost = url.hostname;
+    document.getElementById("siteStatus").textContent = `Current site: ${currentTabHost}`;
+    document.getElementById("toggleSiteBtn").disabled = false;
+
+    loadEnabledHosts(function (enabledHosts) {
+      updateSiteToggleButton(enabledHosts.includes(currentTabHost));
+    });
+  });
+}
+
+function updateSiteToggleButton(isEnabled) {
+  document.getElementById("toggleSiteBtn").textContent = isEnabled
+    ? "Disable on this site"
+    : "Enable on this site";
+}
+
+function toggleCurrentSite() {
+  if (!currentTabHost) {
+    return;
+  }
+
+  loadEnabledHosts(function (enabledHosts) {
+    const isEnabled = enabledHosts.includes(currentTabHost);
+    const nextHosts = isEnabled
+      ? enabledHosts.filter(function (host) {
+          return host !== currentTabHost;
+        })
+      : [...enabledHosts, currentTabHost];
+
+    chrome.storage.local.set({ [enabledHostsStorageKey]: nextHosts }, function () {
+      updateSiteToggleButton(!isEnabled);
+      notifyActiveTab();
+    });
+  });
 }
 
 function saveInteractionSettings() {
@@ -129,6 +190,10 @@ function deleteWord(word) {
 
 function notifyActiveTab() {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (!tabs[0]) {
+      return;
+    }
+
     chrome.tabs.sendMessage(tabs[0].id, { action: "updateHighlight" });
   });
 }
@@ -213,6 +278,7 @@ document.getElementById("wordInput").addEventListener("keypress", function (e) {
     addWord();
   }
 });
+document.getElementById("toggleSiteBtn").addEventListener("click", toggleCurrentSite);
 document.getElementById("clickAction").addEventListener("change", saveInteractionSettings);
 document
   .getElementById("doubleClickAction")
@@ -229,3 +295,4 @@ document.getElementById("clearAllBtn").addEventListener("click", clearAllWords);
 
 loadWords();
 loadSettings();
+loadCurrentSite();

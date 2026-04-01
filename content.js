@@ -4,10 +4,12 @@ let interactionSettings = {
   doubleClickAction: "mark-known",
   overlayColor: "#f87171",
 };
+let isSiteEnabled = false;
 
 const clickActionStorageKey = "clickAction";
 const doubleClickActionStorageKey = "doubleClickAction";
 const overlayColorStorageKey = "overlayColor";
+const enabledHostsStorageKey = "enabledHosts";
 const defaultClickAction = "search-reading";
 const defaultDoubleClickAction = "mark-known";
 const defaultOverlayColor = "#f87171";
@@ -50,6 +52,14 @@ function loadInteractionSettings(callback) {
       if (callback) callback();
     }
   );
+}
+
+function loadSiteEnabledState(callback) {
+  chrome.storage.local.get([enabledHostsStorageKey], function (result) {
+    const enabledHosts = result[enabledHostsStorageKey] || [];
+    isSiteEnabled = enabledHosts.includes(window.location.hostname);
+    if (callback) callback();
+  });
 }
 
 function isKnownWord(word) {
@@ -232,6 +242,10 @@ function createHighlightBoxes(token, overlay) {
 function renderHighlights() {
   removeOverlay();
 
+  if (!isSiteEnabled) {
+    return;
+  }
+
   const overlay = createOverlay();
   const tokens = collectUnknownTokens(document.body);
 
@@ -258,7 +272,9 @@ function addToKnownWords(word) {
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "updateHighlight") {
     loadKnownWords(function () {
-      loadInteractionSettings(renderHighlights);
+      loadInteractionSettings(function () {
+        loadSiteEnabledState(renderHighlights);
+      });
     });
   }
 });
@@ -272,24 +288,29 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
     !changes.knownWords &&
     !changes[clickActionStorageKey] &&
     !changes[doubleClickActionStorageKey] &&
-    !changes[overlayColorStorageKey]
+    !changes[overlayColorStorageKey] &&
+    !changes[enabledHostsStorageKey]
   ) {
     return;
   }
 
   loadKnownWords(function () {
-    loadInteractionSettings(renderHighlights);
+    loadInteractionSettings(function () {
+      loadSiteEnabledState(renderHighlights);
+    });
   });
 });
 
 function initializeHighlights() {
   loadKnownWords(function () {
     loadInteractionSettings(function () {
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", renderHighlights);
-      } else {
-        renderHighlights();
-      }
+      loadSiteEnabledState(function () {
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", renderHighlights);
+        } else {
+          renderHighlights();
+        }
+      });
     });
   });
 }
