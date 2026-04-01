@@ -1,7 +1,74 @@
+const defaultKnownWords = [
+  "あ",
+  "か",
+  "さ",
+  "た",
+  "な",
+  "は",
+  "ま",
+  "や",
+  "ら",
+  "わ",
+  "い",
+  "き",
+  "し",
+  "ち",
+  "に",
+  "ひ",
+  "み",
+  "り",
+  "を",
+  "う",
+  "く",
+  "す",
+  "つ",
+  "ぬ",
+  "ふ",
+  "む",
+  "ゆ",
+  "る",
+  "ん",
+  "え",
+  "け",
+  "せ",
+  "て",
+  "ね",
+  "へ",
+  "め",
+  "れ",
+  "お",
+  "こ",
+  "そ",
+  "と",
+  "の",
+  "ほ",
+  "も",
+  "よ",
+  "ろ",
+];
+
+function loadStoredWords(callback) {
+  chrome.storage.local.get(["knownWords", "knownWordsInitialized"], function (result) {
+    if (result.knownWordsInitialized) {
+      callback(result.knownWords || []);
+      return;
+    }
+
+    chrome.storage.local.set(
+      {
+        knownWords: defaultKnownWords,
+        knownWordsInitialized: true,
+      },
+      function () {
+        callback([...defaultKnownWords]);
+      }
+    );
+  });
+}
+
 // 加载并显示词汇列表
 function loadWords() {
-  chrome.storage.local.get(["knownWords"], function (result) {
-    const knownWords = result.knownWords || [];
+  loadStoredWords(function (knownWords) {
     displayWords(knownWords);
     document.getElementById("wordCount").textContent = knownWords.length;
   });
@@ -12,7 +79,7 @@ function displayWords(words) {
   wordList.innerHTML = "";
 
   if (words.length === 0) {
-    wordList.innerHTML = "<p>No 単語 has been added yet.</p>";
+    wordList.innerHTML = "<p>No known words added yet.</p>";
     return;
   }
 
@@ -32,9 +99,7 @@ function addWord() {
     return;
   }
 
-  chrome.storage.local.get(["knownWords"], function (result) {
-    const knownWords = result.knownWords || [];
-
+  loadStoredWords(function (knownWords) {
     if (knownWords.includes(word)) {
       return;
     }
@@ -51,8 +116,7 @@ function addWord() {
 }
 
 function deleteWord(word) {
-  chrome.storage.local.get(["knownWords"], function (result) {
-    const knownWords = result.knownWords || [];
+  loadStoredWords(function (knownWords) {
     const index = knownWords.indexOf(word);
 
     if (index > -1) {
@@ -71,7 +135,7 @@ function deleteWord(word) {
 }
 
 function clearAllWords() {
-  if (confirm("Are you sure you want to clear all 単語?")) {
+  if (confirm("Are you sure you want to clear all known words?")) {
     chrome.storage.local.set({ knownWords: [] }, function () {
       loadWords();
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {

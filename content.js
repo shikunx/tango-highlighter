@@ -1,13 +1,76 @@
 let knownWords = [];
 
+const defaultKnownWords = [
+  "あ",
+  "か",
+  "さ",
+  "た",
+  "な",
+  "は",
+  "ま",
+  "や",
+  "ら",
+  "わ",
+  "い",
+  "き",
+  "し",
+  "ち",
+  "に",
+  "ひ",
+  "み",
+  "り",
+  "を",
+  "う",
+  "く",
+  "す",
+  "つ",
+  "ぬ",
+  "ふ",
+  "む",
+  "ゆ",
+  "る",
+  "ん",
+  "え",
+  "け",
+  "せ",
+  "て",
+  "ね",
+  "へ",
+  "め",
+  "れ",
+  "お",
+  "こ",
+  "そ",
+  "と",
+  "の",
+  "ほ",
+  "も",
+  "よ",
+  "ろ",
+];
+
 const unknownWordClassName = "vocab-unknown";
 const overlayClassName = "vocab-overlay";
 const segmenter = new Intl.Segmenter("ja", { granularity: "word" });
 
 function loadKnownWords(callback) {
-  chrome.storage.local.get(["knownWords"], function (result) {
-    knownWords = result.knownWords || [];
-    if (callback) callback();
+  chrome.storage.local.get(["knownWords", "knownWordsInitialized"], function (result) {
+    if (result.knownWordsInitialized) {
+      knownWords = result.knownWords || [];
+      if (callback) callback();
+      return;
+    }
+
+    chrome.storage.local.set(
+      {
+        knownWords: defaultKnownWords,
+        knownWordsInitialized: true,
+      },
+      function () {
+        knownWords = [...defaultKnownWords];
+        if (callback) callback();
+      }
+    );
   });
 }
 
@@ -149,8 +212,8 @@ function renderHighlights() {
 }
 
 function addToKnownWords(word) {
-  chrome.storage.local.get(["knownWords"], function (result) {
-    const words = result.knownWords || [];
+  loadKnownWords(function () {
+    const words = [...knownWords];
     if (words.includes(word)) {
       return;
     }
