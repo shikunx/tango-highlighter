@@ -20,7 +20,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.aozora.gr.jp/*"],
-      "js": ["content.js"],
+      "js": ["default-known-words.js", "content.js"],
       "css": ["content.css"]
     }
   ]
