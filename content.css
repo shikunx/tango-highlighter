@@ -18,6 +18,8 @@
   pointer-events: auto;
   appearance: none;
   -webkit-appearance: none;
+  user-select: none;
+  -webkit-user-select: none;
   color: transparent;
   overflow: hidden;
 }

@@ -23,56 +23,43 @@ const unknownWordClassName = "vocab-unknown";
 const overlayClassName = "vocab-overlay";
 const segmenter = new Intl.Segmenter("ja", { granularity: "word" });
 
-function loadKnownWords(callback) {
-  chrome.storage.local.get(["knownWords", "knownWordsInitialized"], function (result) {
-    if (result.knownWordsInitialized) {
-      knownWords = result.knownWords || [];
-      if (callback) callback();
-      return;
-    }
+async function loadKnownWords() {
+  const result = await getLocalStorage(["knownWords", "knownWordsInitialized"]);
+  if (result.knownWordsInitialized) {
+    knownWords = result.knownWords || [];
+    return;
+  }
 
-    chrome.storage.local.set(
-      {
-        knownWords: defaultKnownWords,
-        knownWordsInitialized: true,
-      },
-      function () {
-        knownWords = [...defaultKnownWords];
-        if (callback) callback();
-      }
-    );
+  await setLocalStorage({
+    knownWords: defaultKnownWords,
+    knownWordsInitialized: true,
   });
+  knownWords = [...defaultKnownWords];
 }
 
-function loadInteractionSettings(callback) {
-  chrome.storage.local.get(
-    [
-      clickActionStorageKey,
-      doubleClickActionStorageKey,
-      overlayColorStorageKey,
-      searchEngineStorageKey,
-      searchKeywordStorageKey,
-    ],
-    function (result) {
-      interactionSettings = {
-        clickAction: result[clickActionStorageKey] || defaultClickAction,
-        doubleClickAction:
-          result[doubleClickActionStorageKey] || defaultDoubleClickAction,
-        overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
-        searchEngine: result[searchEngineStorageKey] || defaultSearchEngine,
-        searchKeyword: result[searchKeywordStorageKey] || defaultSearchKeyword,
-      };
-      if (callback) callback();
-    }
-  );
+async function loadInteractionSettings() {
+  const result = await getLocalStorage([
+    clickActionStorageKey,
+    doubleClickActionStorageKey,
+    overlayColorStorageKey,
+    searchEngineStorageKey,
+    searchKeywordStorageKey,
+  ]);
+
+  interactionSettings = {
+    clickAction: result[clickActionStorageKey] || defaultClickAction,
+    doubleClickAction:
+      result[doubleClickActionStorageKey] || defaultDoubleClickAction,
+    overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
+    searchEngine: result[searchEngineStorageKey] || defaultSearchEngine,
+    searchKeyword: result[searchKeywordStorageKey] || defaultSearchKeyword,
+  };
 }
 
-function loadSiteEnabledState(callback) {
-  chrome.storage.local.get([enabledHostsStorageKey], function (result) {
-    const enabledHosts = result[enabledHostsStorageKey] || [];
-    isSiteEnabled = enabledHosts.includes(window.location.hostname);
-    if (callback) callback();
-  });
+async function loadSiteEnabledState() {
+  const result = await getLocalStorage([enabledHostsStorageKey]);
+  const enabledHosts = result[enabledHostsStorageKey] || [];
+  isSiteEnabled = enabledHosts.includes(window.location.hostname);
 }
 
 function isKnownWord(word) {
@@ -274,28 +261,27 @@ function renderHighlights() {
   });
 }
 
-function addToKnownWords(word) {
-  loadKnownWords(function () {
-    const words = [...knownWords];
-    if (words.includes(word)) {
-      return;
-    }
+async function addToKnownWords(word) {
+  await loadKnownWords();
+  const words = [...knownWords];
+  if (words.includes(word)) {
+    return;
+  }
 
-    words.push(word);
-    chrome.storage.local.set({ knownWords: words }, function () {
-      knownWords = words;
-      renderHighlights();
-    });
-  });
+  words.push(word);
+  await setLocalStorage({ knownWords: words });
+  knownWords = words;
+  renderHighlights();
 }
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "updateHighlight") {
-    loadKnownWords(function () {
-      loadInteractionSettings(function () {
-        loadSiteEnabledState(renderHighlights);
-      });
-    });
+    void (async function () {
+      await loadKnownWords();
+      await loadInteractionSettings();
+      await loadSiteEnabledState();
+      renderHighlights();
+    })();
   }
 });
 
@@ -316,28 +302,26 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
     return;
   }
 
-  loadKnownWords(function () {
-    loadInteractionSettings(function () {
-      loadSiteEnabledState(renderHighlights);
-    });
-  });
+  void (async function () {
+    await loadKnownWords();
+    await loadInteractionSettings();
+    await loadSiteEnabledState();
+    renderHighlights();
+  })();
 });
 
-function initializeHighlights() {
-  loadKnownWords(function () {
-    loadInteractionSettings(function () {
-      loadSiteEnabledState(function () {
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", renderHighlights);
-        } else {
-          renderHighlights();
-        }
-      });
-    });
-  });
+async function initializeHighlights() {
+  await loadKnownWords();
+  await loadInteractionSettings();
+  await loadSiteEnabledState();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", renderHighlights);
+  } else {
+    renderHighlights();
+  }
 }
 
-initializeHighlights();
+void initializeHighlights();
 
 window.addEventListener("resize", renderHighlights);
 window.addEventListener("scroll", renderHighlights, { passive: true });

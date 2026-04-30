@@ -11,45 +11,36 @@ const defaultSearchKeyword = "読み方";
 
 let currentTabHost = null;
 
-function loadStoredWords(callback) {
-  chrome.storage.local.get(["knownWords", "knownWordsInitialized"], function (result) {
-    if (result.knownWordsInitialized) {
-      callback(result.knownWords || []);
-      return;
-    }
+async function loadStoredWords() {
+  const result = await getLocalStorage(["knownWords", "knownWordsInitialized"]);
+  if (result.knownWordsInitialized) {
+    return result.knownWords || [];
+  }
 
-    chrome.storage.local.set(
-      {
-        knownWords: defaultKnownWords,
-        knownWordsInitialized: true,
-      },
-      function () {
-        callback([...defaultKnownWords]);
-      }
-    );
+  await setLocalStorage({
+    knownWords: defaultKnownWords,
+    knownWordsInitialized: true,
   });
+  return [...defaultKnownWords];
 }
 
-function loadInteractionSettings(callback) {
-  chrome.storage.local.get(
-    [
-      clickActionStorageKey,
-      doubleClickActionStorageKey,
-      overlayColorStorageKey,
-      searchEngineStorageKey,
-      searchKeywordStorageKey,
-    ],
-    function (result) {
-      callback({
-        clickAction: result[clickActionStorageKey] || defaultClickAction,
-        doubleClickAction:
-          result[doubleClickActionStorageKey] || defaultDoubleClickAction,
-        overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
-        searchEngine: result[searchEngineStorageKey] || defaultSearchEngine,
-        searchKeyword: result[searchKeywordStorageKey] || defaultSearchKeyword,
-      });
-    }
-  );
+async function loadInteractionSettings() {
+  const result = await getLocalStorage([
+    clickActionStorageKey,
+    doubleClickActionStorageKey,
+    overlayColorStorageKey,
+    searchEngineStorageKey,
+    searchKeywordStorageKey,
+  ]);
+
+  return {
+    clickAction: result[clickActionStorageKey] || defaultClickAction,
+    doubleClickAction:
+      result[doubleClickActionStorageKey] || defaultDoubleClickAction,
+    overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
+    searchEngine: result[searchEngineStorageKey] || defaultSearchEngine,
+    searchKeyword: result[searchKeywordStorageKey] || defaultSearchKeyword,
+  };
 }
 
 function renderSearchEngineOptions() {
@@ -64,10 +55,9 @@ function renderSearchEngineOptions() {
   });
 }
 
-function loadEnabledHosts(callback) {
-  chrome.storage.local.get([enabledHostsStorageKey], function (result) {
-    callback(result[enabledHostsStorageKey] || []);
-  });
+async function loadEnabledHosts() {
+  const result = await getLocalStorage([enabledHostsStorageKey]);
+  return result[enabledHostsStorageKey] || [];
 }
 
 function loadCurrentSite() {
@@ -90,9 +80,10 @@ function loadCurrentSite() {
     document.getElementById("siteStatus").textContent = `Current site: ${currentTabHost}`;
     document.getElementById("toggleSiteBtn").disabled = false;
 
-    loadEnabledHosts(function (enabledHosts) {
+    void (async function () {
+      const enabledHosts = await loadEnabledHosts();
       updateSiteToggleButton(enabledHosts.includes(currentTabHost));
-    });
+    })();
   });
 }
 
@@ -102,64 +93,56 @@ function updateSiteToggleButton(isEnabled) {
     : "Enable on this site";
 }
 
-function toggleCurrentSite() {
+async function toggleCurrentSite() {
   if (!currentTabHost) {
     return;
   }
 
-  loadEnabledHosts(function (enabledHosts) {
-    const isEnabled = enabledHosts.includes(currentTabHost);
-    const nextHosts = isEnabled
-      ? enabledHosts.filter(function (host) {
-          return host !== currentTabHost;
-        })
-      : [...enabledHosts, currentTabHost];
+  const enabledHosts = await loadEnabledHosts();
+  const isEnabled = enabledHosts.includes(currentTabHost);
+  const nextHosts = isEnabled
+    ? enabledHosts.filter(function (host) {
+        return host !== currentTabHost;
+      })
+    : [...enabledHosts, currentTabHost];
 
-    chrome.storage.local.set({ [enabledHostsStorageKey]: nextHosts }, function () {
-      updateSiteToggleButton(!isEnabled);
-      notifyActiveTab();
-    });
-  });
+  await setLocalStorage({ [enabledHostsStorageKey]: nextHosts });
+  updateSiteToggleButton(!isEnabled);
+  notifyActiveTab();
 }
 
-function saveInteractionSettings() {
+async function saveInteractionSettings() {
   const clickAction = document.getElementById("clickAction").value;
   const doubleClickAction = document.getElementById("doubleClickAction").value;
   const overlayColor = document.getElementById("overlayColor").value;
   const searchEngine = document.getElementById("searchEngine").value;
   const searchKeyword = document.getElementById("searchKeyword").value.trim();
 
-  chrome.storage.local.set(
-    {
-      [clickActionStorageKey]: clickAction,
-      [doubleClickActionStorageKey]: doubleClickAction,
-      [overlayColorStorageKey]: overlayColor,
-      [searchEngineStorageKey]: searchEngine,
-      [searchKeywordStorageKey]: searchKeyword || defaultSearchKeyword,
-    },
-    function () {
-      notifyActiveTab();
-    }
-  );
+  await setLocalStorage({
+    [clickActionStorageKey]: clickAction,
+    [doubleClickActionStorageKey]: doubleClickAction,
+    [overlayColorStorageKey]: overlayColor,
+    [searchEngineStorageKey]: searchEngine,
+    [searchKeywordStorageKey]: searchKeyword || defaultSearchKeyword,
+  });
+  notifyActiveTab();
 }
 
-function loadSettings() {
-  loadInteractionSettings(function (settings) {
-    document.getElementById("clickAction").value = settings.clickAction;
-    document.getElementById("doubleClickAction").value =
-      settings.doubleClickAction;
-    document.getElementById("searchEngine").value = settings.searchEngine;
-    document.getElementById("searchKeyword").value = settings.searchKeyword;
-    document.getElementById("overlayColor").value = settings.overlayColor;
-  });
+async function loadSettings() {
+  const settings = await loadInteractionSettings();
+  document.getElementById("clickAction").value = settings.clickAction;
+  document.getElementById("doubleClickAction").value =
+    settings.doubleClickAction;
+  document.getElementById("searchEngine").value = settings.searchEngine;
+  document.getElementById("searchKeyword").value = settings.searchKeyword;
+  document.getElementById("overlayColor").value = settings.overlayColor;
 }
 
 // 加载并显示词汇列表
-function loadWords() {
-  loadStoredWords(function (knownWords) {
-    displayWords(knownWords);
-    document.getElementById("wordCount").textContent = knownWords.length;
-  });
+async function loadWords() {
+  const knownWords = await loadStoredWords();
+  displayWords(knownWords);
+  document.getElementById("wordCount").textContent = knownWords.length;
 }
 
 function displayWords(words) {
@@ -179,7 +162,7 @@ function displayWords(words) {
   });
 }
 
-function addWord() {
+async function addWord() {
   const input = document.getElementById("wordInput");
   const word = input.value.trim();
 
@@ -187,32 +170,28 @@ function addWord() {
     return;
   }
 
-  loadStoredWords(function (knownWords) {
-    if (knownWords.includes(word)) {
-      return;
-    }
+  const knownWords = await loadStoredWords();
+  if (knownWords.includes(word)) {
+    return;
+  }
 
-    knownWords.push(word);
-    chrome.storage.local.set({ knownWords: knownWords }, function () {
-      input.value = "";
-      loadWords();
-      notifyActiveTab();
-    });
-  });
+  knownWords.push(word);
+  await setLocalStorage({ knownWords: knownWords });
+  input.value = "";
+  loadWords();
+  notifyActiveTab();
 }
 
-function deleteWord(word) {
-  loadStoredWords(function (knownWords) {
-    const index = knownWords.indexOf(word);
+async function deleteWord(word) {
+  const knownWords = await loadStoredWords();
+  const index = knownWords.indexOf(word);
 
-    if (index > -1) {
-      knownWords.splice(index, 1);
-      chrome.storage.local.set({ knownWords: knownWords }, function () {
-        loadWords();
-        notifyActiveTab();
-      });
-    }
-  });
+  if (index > -1) {
+    knownWords.splice(index, 1);
+    await setLocalStorage({ knownWords: knownWords });
+    loadWords();
+    notifyActiveTab();
+  }
 }
 
 function notifyActiveTab() {
@@ -233,12 +212,11 @@ function notifyActiveTab() {
   });
 }
 
-function clearAllWords() {
+async function clearAllWords() {
   if (confirm("Are you sure you want to clear all known words?")) {
-    chrome.storage.local.set({ knownWords: [] }, function () {
-      loadWords();
-      notifyActiveTab();
-    });
+    await setLocalStorage({ knownWords: [] });
+    loadWords();
+    notifyActiveTab();
   }
 }
 
@@ -253,19 +231,18 @@ function formatExportTimestamp(date) {
   return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
 }
 
-function exportWords() {
-  loadStoredWords(function (knownWords) {
-    const blob = new Blob([knownWords.join("\n")], {
-      type: "text/plain",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const timestamp = formatExportTimestamp(new Date());
-    link.href = url;
-    link.download = `tango-highlighter-known-words-${timestamp}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
+async function exportWords() {
+  const knownWords = await loadStoredWords();
+  const blob = new Blob([knownWords.join("\n")], {
+    type: "text/plain",
   });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const timestamp = formatExportTimestamp(new Date());
+  link.href = url;
+  link.download = `tango-highlighter-known-words-${timestamp}.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function importWords(event) {
@@ -276,33 +253,31 @@ function importWords(event) {
 
   const reader = new FileReader();
   reader.onload = function () {
-    try {
-      if (typeof reader.result !== "string") {
-        throw new Error("Imported file must be plain text.");
-      }
+    void (async function () {
+      try {
+        if (typeof reader.result !== "string") {
+          throw new Error("Imported file must be plain text.");
+        }
 
-      const importedWords = reader.result
-        .split(/\r?\n/)
-        .map(function (word) {
-          return word.trim();
-        });
-      const uniqueWords = [...new Set(importedWords.filter(Boolean))];
+        const importedWords = reader.result
+          .split(/\r?\n/)
+          .map(function (word) {
+            return word.trim();
+          });
+        const uniqueWords = [...new Set(importedWords.filter(Boolean))];
 
-      chrome.storage.local.set(
-        {
+        await setLocalStorage({
           knownWords: uniqueWords,
           knownWordsInitialized: true,
-        },
-        function () {
-          loadWords();
-          notifyActiveTab();
-          document.getElementById("importFileInput").value = "";
-        }
-      );
-    } catch (error) {
-      alert(error.message);
-      document.getElementById("importFileInput").value = "";
-    }
+        });
+        loadWords();
+        notifyActiveTab();
+        document.getElementById("importFileInput").value = "";
+      } catch (error) {
+        alert(error.message);
+        document.getElementById("importFileInput").value = "";
+      }
+    })();
   };
   reader.readAsText(file);
 }

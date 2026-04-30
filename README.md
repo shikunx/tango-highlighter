@@ -1,31 +1,30 @@
 # Tango Highlighter
 
-A small Chrome extension for Japanese reading practice.
+A Chrome extension for Japanese reading practice.
 
-It highlights Japanese words on `aozora.gr.jp` that are not in your known word list.
-You can add known words from the popup, or click a highlighted word on the page to mark it as known.
+It highlights Japanese words you have not saved yet and lets you manage your known words from the popup.
+You can also click a highlighted word on the page to save it.
 
 ## What it does
 
-- stores your known words in `chrome.storage.local`
-- segments Japanese text with `Intl.Segmenter`
-- highlights words that are not in your known list
-- lets you manage the known word list from the extension popup
+- saves your known words and settings in the browser
+- highlights words you have not saved yet
+- lets you manage the known word list from the popup
+- lets you turn highlighting on or off for each site
 
 ## Files
 
-- `manifest.json`: Chrome extension manifest
-- `popup.html`: popup UI
-- `popup.js`: popup logic for adding/removing known words
-- `content.js`: content script that highlights unknown words on the page
-- `content.css`: styles for highlighted words
-- `icon/`: extension icons
+- `manifest.json`: extension settings
+- `popup.html`: popup
+- `storage.js`: shared helper
+- `popup.js`: popup logic
+- `content.js`: page highlighting logic
+- `content.css`: highlight styles
+- `icon/`: icons
 
 ## Supported site
 
-Currently only:
-
-- `https://www.aozora.gr.jp/*`
+The extension can run on any page, but highlighting only appears on sites you enable in the popup.
 
 ## How to load
 
@@ -37,18 +36,14 @@ Currently only:
 
 ## How to use
 
-1. Open a supported page on Aozora Bunko.
+1. Open any page.
 2. Click the extension icon.
-3. Add words you already know.
-4. Unknown Japanese words on the page will be underlined.
-5. Click a highlighted word on the page to add it to your known words.
+3. Enable highlighting for the current site.
+4. Add words you already know.
+5. Unknown Japanese words on the page will be underlined.
+6. Click a highlighted word on the page to add it to your known words.
 
 ## Notes
 
 - This project uses plain HTML, CSS, and JavaScript.
-- There is no build step.
-- Known words are stored locally in the browser.
-
-## Version
-
-Current manifest version: `1.0`
+- Known words and settings stay in your browser.
