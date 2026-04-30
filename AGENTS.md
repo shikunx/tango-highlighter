@@ -19,6 +19,7 @@ Tango Highlighter is a plain HTML/CSS/JavaScript Chrome extension for Japanese r
 - Prefer plain browser APIs and existing project patterns.
 - Preserve Chrome extension compatibility.
 - Store user data in `chrome.storage.local` only when needed.
+- When vendoring code or assets, verify the actual runtime file paths and data format before wiring them in; do not assume package entrypoints, relative URLs, or compression behavior.
 - If the task is performance optimization, measure first and optimize after you have data.
 
 ## Verification

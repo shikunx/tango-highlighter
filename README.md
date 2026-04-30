@@ -3,6 +3,7 @@
 A Chrome extension for Japanese reading practice.
 
 It highlights Japanese words you have not saved yet and lets you manage your known words from the popup.
+It uses bundled kuromoji-based tokenization for Japanese word splitting.
 You can also click a highlighted word on the page to save it.
 
 ## What it does
@@ -21,6 +22,7 @@ You can also click a highlighted word on the page to save it.
 - `content.js`: page highlighting logic
 - `content.css`: highlight styles
 - `icon/`: icons
+- `vendor/kuromoji/`: bundled tokenizer and dictionary files
 
 ## Supported site
 
@@ -46,4 +48,5 @@ The extension can run on any page, but highlighting only appears on sites you en
 ## Notes
 
 - This project uses plain HTML, CSS, and JavaScript.
+- Japanese tokenization is provided by bundled kuromoji files in `vendor/kuromoji/`.
 - Known words and settings stay in your browser.
