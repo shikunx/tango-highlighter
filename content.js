@@ -21,7 +21,8 @@ const defaultSearchKeyword = "読み方";
 
 const unknownWordClassName = "vocab-unknown";
 const overlayClassName = "vocab-overlay";
-const segmenter = new Intl.Segmenter("ja", { granularity: "word" });
+let tokenizerPromise = null;
+let tokenizer = null;
 
 async function loadKnownWords() {
   const result = await getLocalStorage(["knownWords", "knownWordsInitialized"]);
@@ -106,13 +107,39 @@ function collectTextNodes(root) {
   return textNodes;
 }
 
+function getTokenizer() {
+  if (tokenizerPromise === null) {
+    tokenizerPromise = (async function () {
+      const kuromoji = await import(chrome.runtime.getURL("vendor/kuromoji/build/index.mjs"));
+      const loader = {
+        loadArrayBuffer: async function (filename) {
+          const response = await fetch(chrome.runtime.getURL(`vendor/kuromoji/dict/${filename}`));
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${filename}, status: ${response.status}`);
+          }
+          const decompressed = response.body.pipeThrough(new DecompressionStream("gzip"));
+          return new Response(decompressed).arrayBuffer();
+        },
+      };
+      tokenizer = await new kuromoji.TokenizerBuilder({ loader: loader }).build();
+      return tokenizer;
+    })();
+  }
+
+  return tokenizerPromise;
+}
+
 function collectUnknownTokens(root) {
   const textNodes = collectTextNodes(root);
   const tokens = [];
 
   textNodes.forEach(function (textNode) {
     const text = textNode.textContent;
-    const segments = segmenter.segment(text);
+    const segments = tokenizer.tokenize(text).map(function (item) {
+      return {
+        segment: item.surface_form,
+      };
+    });
     let currentOffset = 0;
 
     for (const segment of segments) {
@@ -249,7 +276,7 @@ function createHighlightBoxes(token, overlay) {
 function renderHighlights() {
   removeOverlay();
 
-  if (!isSiteEnabled) {
+  if (!isSiteEnabled || tokenizer === null) {
     return;
   }
 
@@ -314,6 +341,7 @@ async function initializeHighlights() {
   await loadKnownWords();
   await loadInteractionSettings();
   await loadSiteEnabledState();
+  await getTokenizer();
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", renderHighlights);
   } else {

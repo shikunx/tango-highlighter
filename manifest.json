@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "単語 Highlighter",
-  "version": "1.0",
+  "version": "1.0.1",
   "description": "Highlight Japanese words you don’t know.",
   "permissions": ["storage"],
   "icons": {
@@ -22,6 +22,12 @@
       "matches": ["<all_urls>"],
       "js": ["default-known-words.js", "search-engines.js", "storage.js", "content.js"],
       "css": ["content.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["vendor/kuromoji/build/index.mjs", "vendor/kuromoji/dict/*"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
