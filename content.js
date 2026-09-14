@@ -273,7 +273,11 @@ function createHighlightBoxes(token, overlay) {
   });
 }
 
-function renderHighlights() {
+let renderGeneration = 0;
+
+async function renderHighlights() {
+  const generation = ++renderGeneration;
+
   removeOverlay();
 
   if (!isSiteEnabled || tokenizer === null) {
@@ -282,10 +286,27 @@ function renderHighlights() {
 
   const overlay = createOverlay();
   const tokens = collectUnknownTokens(document.body);
+  const BATCH_SIZE = 20;
 
-  tokens.forEach(function (token) {
-    createHighlightBoxes(token, overlay);
-  });
+  for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+    // A newer render supersedes this one mid-batch; stop appending to the stale overlay.
+    if (generation !== renderGeneration) {
+      return;
+    }
+
+    const batch = tokens.slice(i, i + BATCH_SIZE);
+    await new Promise(function (resolve) {
+      requestAnimationFrame(function () {
+        batch.forEach(function (token) {
+          createHighlightBoxes(token, overlay);
+        });
+        resolve();
+      });
+    });
+    if (globalThis.scheduler?.yield) {
+      await scheduler.yield();
+    }
+  }
 }
 
 async function addToKnownWords(word) {
@@ -341,7 +362,13 @@ async function initializeHighlights() {
   await loadKnownWords();
   await loadInteractionSettings();
   await loadSiteEnabledState();
-  await getTokenizer();
+  try {
+    await getTokenizer();
+  } catch (error) {
+    console.error("Failed to initialize tokenizer:", error);
+    return;
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", renderHighlights);
   } else {
@@ -351,5 +378,19 @@ async function initializeHighlights() {
 
 void initializeHighlights();
 
-window.addEventListener("resize", renderHighlights);
-window.addEventListener("scroll", renderHighlights, { passive: true });
+let renderScheduled = false;
+
+function scheduleRenderHighlights() {
+  if (renderScheduled) {
+    return;
+  }
+
+  renderScheduled = true;
+  requestAnimationFrame(function () {
+    renderScheduled = false;
+    void renderHighlights();
+  });
+}
+
+window.addEventListener("resize", scheduleRenderHighlights);
+window.addEventListener("scroll", scheduleRenderHighlights, { passive: true });
