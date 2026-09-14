@@ -1,11 +1,7 @@
 function getLocalStorage(keys) {
-  return new Promise(function (resolve) {
-    chrome.storage.local.get(keys, resolve);
-  });
+  return chrome.storage.local.get(keys);
 }
 
 function setLocalStorage(items) {
-  return new Promise(function (resolve) {
-    chrome.storage.local.set(items, resolve);
-  });
+  return chrome.storage.local.set(items);
 }

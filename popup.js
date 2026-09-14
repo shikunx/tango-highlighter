@@ -60,10 +60,9 @@ async function loadEnabledHosts() {
   return result[enabledHostsStorageKey] || [];
 }
 
-function loadCurrentSite() {
-  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    const activeTab = tabs[0];
-    if (!activeTab || !activeTab.url) {
+async function loadCurrentSite() {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!activeTab || !activeTab.url) {
       document.getElementById("siteStatus").textContent = "Current site: unavailable";
       document.getElementById("toggleSiteBtn").disabled = true;
       return;
@@ -80,11 +79,8 @@ function loadCurrentSite() {
     document.getElementById("siteStatus").textContent = `Current site: ${currentTabHost}`;
     document.getElementById("toggleSiteBtn").disabled = false;
 
-    void (async function () {
-      const enabledHosts = await loadEnabledHosts();
-      updateSiteToggleButton(enabledHosts.includes(currentTabHost));
-    })();
-  });
+    const enabledHosts = await loadEnabledHosts();
+    updateSiteToggleButton(enabledHosts.includes(currentTabHost));
 }
 
 function updateSiteToggleButton(isEnabled) {
@@ -157,7 +153,9 @@ function displayWords(words) {
   words.forEach((word) => {
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = word;
-    deleteBtn.onclick = () => deleteWord(word);
+    deleteBtn.addEventListener("click", function () {
+      deleteWord(word);
+    });
     wordList.appendChild(deleteBtn);
   });
 }
@@ -194,22 +192,17 @@ async function deleteWord(word) {
   }
 }
 
-function notifyActiveTab() {
-  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    if (!tabs[0]) {
-      return;
-    }
+async function notifyActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) {
+    return;
+  }
 
-    chrome.tabs.sendMessage(
-      tabs[0].id,
-      { action: "updateHighlight" },
-      function () {
-        if (chrome.runtime.lastError) {
-          return;
-        }
-      }
-    );
-  });
+  try {
+    await chrome.tabs.sendMessage(tab.id, { action: "updateHighlight" });
+  } catch {
+    // Rejection is normal for pages without our content script (e.g. chrome:// pages).
+  }
 }
 
 async function clearAllWords() {
@@ -308,4 +301,4 @@ document.getElementById("clearAllBtn").addEventListener("click", clearAllWords);
 renderSearchEngineOptions();
 loadWords();
 loadSettings();
-loadCurrentSite();
+void loadCurrentSite();
