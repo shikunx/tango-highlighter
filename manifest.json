@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "単語 Highlighter",
   "version": "1.0.1",
+  "minimum_chrome_version": "111",
   "description": "Highlight Japanese words you don’t know.",
   "permissions": ["storage", "activeTab"],
   "icons": {
