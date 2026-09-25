@@ -168,6 +168,7 @@ async function addWord() {
 
   const knownWords = await loadStoredWords();
   if (knownWords.includes(word)) {
+    alert(`"${word}" is already in the list.`);
     return;
   }
 
