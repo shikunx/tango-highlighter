@@ -120,18 +120,31 @@ function collectTextNodes(root) {
 function getTokenizer() {
   if (tokenizerPromise === null) {
     tokenizerPromise = (async function () {
-      const kuromoji = await import(chrome.runtime.getURL("vendor/kuromoji/build/index.mjs"));
-      const loader = {
-        loadArrayBuffer: async function (filename) {
-          const response = await fetch(chrome.runtime.getURL(`vendor/kuromoji/dict/${filename}`));
-          if (!response.ok) {
-            throw new Error(`Failed to fetch ${filename}, status: ${response.status}`);
-          }
-          const decompressed = response.body.pipeThrough(new DecompressionStream("gzip"));
-          return new Response(decompressed).arrayBuffer();
+      const vibrato = await import(chrome.runtime.getURL("vendor/vibrato/pkg/vibrato_wasm.js"));
+      const wasmResponse = await fetch(chrome.runtime.getURL("vendor/vibrato/pkg/vibrato_wasm_bg.wasm"));
+      if (!wasmResponse.ok) {
+        throw new Error(`Failed to fetch wasm, status: ${wasmResponse.status}`);
+      }
+      await vibrato.default(await wasmResponse.arrayBuffer());
+
+      const dictResponse = await fetch(chrome.runtime.getURL("vendor/vibrato/dict/system.dic.zst"));
+      if (!dictResponse.ok) {
+        throw new Error(`Failed to fetch dictionary, status: ${dictResponse.status}`);
+      }
+      const dictBytes = new Uint8Array(await dictResponse.arrayBuffer());
+      const rawTokenizer = vibrato.Vibrato.from_zstd(dictBytes);
+      tokenizer = {
+        tokenize: function (text) {
+          return rawTokenizer.tokenize(text).map(function (token) {
+            // IPADIC feature CSV column 7 is the base form; unknown words carry "*".
+            const parts = token.feature.split(",");
+            return {
+              segment: token.surface,
+              basic: parts.length > 6 ? parts[6] : "*",
+            };
+          });
         },
       };
-      tokenizer = await new kuromoji.TokenizerBuilder({ loader: loader }).build();
       return tokenizer;
     })();
   }
