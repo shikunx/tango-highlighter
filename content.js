@@ -329,19 +329,7 @@ async function addToKnownWords(word) {
   words.push(word);
   await setLocalStorage({ knownWords: words });
   knownWords = words;
-  renderHighlights();
 }
-
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  if (request.action === "updateHighlight") {
-    void (async function () {
-      await loadKnownWords();
-      await loadInteractionSettings();
-      await loadSiteEnabledState();
-      renderHighlights();
-    })();
-  }
-});
 
 chrome.storage.onChanged.addListener(function (changes, areaName) {
   if (areaName !== "local") {

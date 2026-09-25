@@ -104,7 +104,6 @@ async function toggleCurrentSite() {
 
   await setLocalStorage({ [enabledHostsStorageKey]: nextHosts });
   updateSiteToggleButton(!isEnabled);
-  notifyActiveTab();
 }
 
 async function saveInteractionSettings() {
@@ -121,7 +120,6 @@ async function saveInteractionSettings() {
     [searchEngineStorageKey]: searchEngine,
     [searchKeywordStorageKey]: searchKeyword || defaultSearchKeyword,
   });
-  notifyActiveTab();
 }
 
 async function loadSettings() {
@@ -177,7 +175,6 @@ async function addWord() {
   await setLocalStorage({ knownWords: knownWords });
   input.value = "";
   loadWords();
-  notifyActiveTab();
 }
 
 async function deleteWord(word) {
@@ -188,20 +185,6 @@ async function deleteWord(word) {
     knownWords.splice(index, 1);
     await setLocalStorage({ knownWords: knownWords });
     loadWords();
-    notifyActiveTab();
-  }
-}
-
-async function notifyActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) {
-    return;
-  }
-
-  try {
-    await chrome.tabs.sendMessage(tab.id, { action: "updateHighlight" });
-  } catch {
-    // Rejection is normal for pages without our content script (e.g. chrome:// pages).
   }
 }
 
@@ -209,7 +192,6 @@ async function clearAllWords() {
   if (confirm("Are you sure you want to clear all known words?")) {
     await setLocalStorage({ knownWords: [] });
     loadWords();
-    notifyActiveTab();
   }
 }
 
@@ -264,7 +246,6 @@ function importWords(event) {
           knownWordsInitialized: true,
         });
         loadWords();
-        notifyActiveTab();
         document.getElementById("importFileInput").value = "";
       } catch (error) {
         alert(error.message);
