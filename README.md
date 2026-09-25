@@ -42,7 +42,7 @@ The extension can run on any page, but highlighting only appears on sites you en
 2. Click the extension icon.
 3. Enable highlighting for the current site.
 4. Add words you already know.
-5. Unknown Japanese words on the page will be underlined.
+5. Unknown Japanese words on the page will be highlighted.
 6. Click a highlighted word on the page to add it to your known words.
 
 ## Notes
