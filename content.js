@@ -393,4 +393,3 @@ function scheduleRenderHighlights() {
 }
 
 window.addEventListener("resize", scheduleRenderHighlights);
-window.addEventListener("scroll", scheduleRenderHighlights, { passive: true });
