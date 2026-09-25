@@ -256,7 +256,6 @@ function createHighlightBoxes(token, overlay) {
       e.preventDefault();
       e.stopPropagation();
     });
-    box.dataset.searchEngine = interactionSettings.searchEngine;
     box.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
