@@ -24,28 +24,27 @@ const overlayClassName = "vocab-overlay";
 let tokenizerPromise = null;
 let tokenizer = null;
 
-async function loadKnownWords() {
-  const result = await getLocalStorage(["knownWords", "knownWordsInitialized"]);
-  if (result.knownWordsInitialized) {
-    knownWords = result.knownWords || [];
-    return;
-  }
-
-  await setLocalStorage({
-    knownWords: defaultKnownWords,
-    knownWordsInitialized: true,
-  });
-  knownWords = [...defaultKnownWords];
-}
-
-async function loadInteractionSettings() {
+async function loadState() {
   const result = await getLocalStorage([
+    "knownWords",
+    "knownWordsInitialized",
     clickActionStorageKey,
     doubleClickActionStorageKey,
     overlayColorStorageKey,
     searchEngineStorageKey,
     searchKeywordStorageKey,
+    enabledHostsStorageKey,
   ]);
+
+  if (result.knownWordsInitialized) {
+    knownWords = result.knownWords || [];
+  } else {
+    await setLocalStorage({
+      knownWords: defaultKnownWords,
+      knownWordsInitialized: true,
+    });
+    knownWords = [...defaultKnownWords];
+  }
 
   interactionSettings = {
     clickAction: result[clickActionStorageKey] || defaultClickAction,
@@ -55,10 +54,7 @@ async function loadInteractionSettings() {
     searchEngine: result[searchEngineStorageKey] || defaultSearchEngine,
     searchKeyword: result[searchKeywordStorageKey] || defaultSearchKeyword,
   };
-}
 
-async function loadSiteEnabledState() {
-  const result = await getLocalStorage([enabledHostsStorageKey]);
   const enabledHosts = result[enabledHostsStorageKey] || [];
   isSiteEnabled = enabledHosts.includes(window.location.hostname);
 }
@@ -320,7 +316,7 @@ async function renderHighlights() {
 }
 
 async function addToKnownWords(word) {
-  await loadKnownWords();
+  await loadState();
   const words = [...knownWords];
   if (words.includes(word)) {
     return;
@@ -349,17 +345,13 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
   }
 
   void (async function () {
-    await loadKnownWords();
-    await loadInteractionSettings();
-    await loadSiteEnabledState();
+    await loadState();
     renderHighlights();
   })();
 });
 
 async function initializeHighlights() {
-  await loadKnownWords();
-  await loadInteractionSettings();
-  await loadSiteEnabledState();
+  await loadState();
   try {
     await getTokenizer();
   } catch (error) {
