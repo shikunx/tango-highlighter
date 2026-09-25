@@ -241,6 +241,14 @@ function importWords(event) {
           });
         const uniqueWords = [...new Set(importedWords.filter(Boolean))];
 
+        const confirmed = confirm(
+          `Replace all known words with ${uniqueWords.length} imported words?`
+        );
+        if (!confirmed) {
+          document.getElementById("importFileInput").value = "";
+          return;
+        }
+
         await setLocalStorage({
           knownWords: uniqueWords,
           knownWordsInitialized: true,
