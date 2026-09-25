@@ -77,7 +77,9 @@ function isIgnorableElement(element) {
     tagName === "SCRIPT" ||
     tagName === "STYLE" ||
     tagName === "NOSCRIPT" ||
-    tagName === "IFRAME"
+    tagName === "IFRAME" ||
+    tagName === "RT" ||
+    tagName === "RP"
   );
 }
 
