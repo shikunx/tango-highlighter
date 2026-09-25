@@ -63,24 +63,24 @@ async function loadEnabledHosts() {
 async function loadCurrentSite() {
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!activeTab || !activeTab.url) {
-      document.getElementById("siteStatus").textContent = "Current site: unavailable";
-      document.getElementById("toggleSiteBtn").disabled = true;
-      return;
-    }
+    document.getElementById("siteStatus").textContent = "Current site: unavailable";
+    document.getElementById("toggleSiteBtn").disabled = true;
+    return;
+  }
 
-    const url = new URL(activeTab.url);
-    if (!url.hostname) {
-      document.getElementById("siteStatus").textContent = "Current site: unsupported";
-      document.getElementById("toggleSiteBtn").disabled = true;
-      return;
-    }
+  const url = new URL(activeTab.url);
+  if (!url.hostname) {
+    document.getElementById("siteStatus").textContent = "Current site: unsupported";
+    document.getElementById("toggleSiteBtn").disabled = true;
+    return;
+  }
 
-    currentTabHost = url.hostname;
-    document.getElementById("siteStatus").textContent = `Current site: ${currentTabHost}`;
-    document.getElementById("toggleSiteBtn").disabled = false;
+  currentTabHost = url.hostname;
+  document.getElementById("siteStatus").textContent = `Current site: ${currentTabHost}`;
+  document.getElementById("toggleSiteBtn").disabled = false;
 
-    const enabledHosts = await loadEnabledHosts();
-    updateSiteToggleButton(enabledHosts.includes(currentTabHost));
+  const enabledHosts = await loadEnabledHosts();
+  updateSiteToggleButton(enabledHosts.includes(currentTabHost));
 }
 
 function updateSiteToggleButton(isEnabled) {
