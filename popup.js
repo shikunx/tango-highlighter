@@ -276,8 +276,8 @@ function importWords(event) {
 }
 
 document.getElementById("addBtn").addEventListener("click", addWord);
-document.getElementById("wordInput").addEventListener("keypress", function (e) {
-  if (e.key === "Enter") {
+document.getElementById("wordInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && !e.isComposing) {
     addWord();
   }
 });
