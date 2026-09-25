@@ -28,7 +28,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["vendor/kuromoji/build/index.mjs", "vendor/kuromoji/dict/*"],
+      "resources": ["vendor/vibrato/pkg/*", "vendor/vibrato/dict/*"],
       "matches": ["<all_urls>"]
     }
   ]
