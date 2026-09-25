@@ -63,8 +63,14 @@ async function loadSiteEnabledState() {
   isSiteEnabled = enabledHosts.includes(window.location.hostname);
 }
 
-function isKnownWord(word) {
-  return knownWords.includes(word);
+function isKnownToken(surface, basic) {
+  if (knownWords.includes(surface)) {
+    return true;
+  }
+
+  // Kuromoji emits "*" as basic_form for tokens without a dictionary form,
+  // so only consult it for inflected words.
+  return Boolean(basic) && basic !== "*" && knownWords.includes(basic);
 }
 
 function isJapaneseWord(word) {
@@ -140,12 +146,14 @@ function collectUnknownTokens(root) {
     const segments = tokenizer.tokenize(text).map(function (item) {
       return {
         segment: item.surface_form,
+        basic: item.basic_form,
       };
     });
     let currentOffset = 0;
 
     for (const segment of segments) {
       const word = segment.segment;
+      const basic = segment.basic;
       const startOffset = currentOffset;
       const endOffset = startOffset + word.length;
       currentOffset = endOffset;
@@ -158,7 +166,7 @@ function collectUnknownTokens(root) {
         continue;
       }
 
-      if (isKnownWord(word)) {
+      if (isKnownToken(word, basic)) {
         continue;
       }
 
