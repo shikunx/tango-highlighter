@@ -158,12 +158,7 @@ function collectUnknownTokens(root) {
 
   textNodes.forEach(function (textNode) {
     const text = textNode.textContent;
-    const segments = tokenizer.tokenize(text).map(function (item) {
-      return {
-        segment: item.surface_form,
-        basic: item.basic_form,
-      };
-    });
+    const segments = tokenizer.tokenize(text);
     let currentOffset = 0;
 
     for (const segment of segments) {
