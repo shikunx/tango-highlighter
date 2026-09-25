@@ -1,4 +1,5 @@
 let knownWords = [];
+let knownWordSet = new Set();
 let interactionSettings = {
   clickAction: "search-reading",
   doubleClickAction: "mark-known",
@@ -37,13 +38,13 @@ async function loadState() {
   ]);
 
   if (result.knownWordsInitialized) {
-    knownWords = result.knownWords || [];
+    setKnownWords(result.knownWords || []);
   } else {
     await setLocalStorage({
       knownWords: defaultKnownWords,
       knownWordsInitialized: true,
     });
-    knownWords = [...defaultKnownWords];
+    setKnownWords([...defaultKnownWords]);
   }
 
   interactionSettings = {
@@ -59,14 +60,19 @@ async function loadState() {
   isSiteEnabled = enabledHosts.includes(window.location.hostname);
 }
 
+function setKnownWords(words) {
+  knownWords = words;
+  knownWordSet = new Set(words);
+}
+
 function isKnownToken(surface, basic) {
-  if (knownWords.includes(surface)) {
+  if (knownWordSet.has(surface)) {
     return true;
   }
 
   // Kuromoji emits "*" as basic_form for tokens without a dictionary form,
   // so only consult it for inflected words.
-  return Boolean(basic) && basic !== "*" && knownWords.includes(basic);
+  return Boolean(basic) && basic !== "*" && knownWordSet.has(basic);
 }
 
 function isJapaneseWord(word) {
@@ -324,7 +330,7 @@ async function addToKnownWords(word) {
 
   words.push(word);
   await setLocalStorage({ knownWords: words });
-  knownWords = words;
+  setKnownWords(words);
 }
 
 chrome.storage.onChanged.addListener(function (changes, areaName) {
