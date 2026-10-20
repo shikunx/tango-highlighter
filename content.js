@@ -423,13 +423,9 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
 
   void (async function () {
     await loadState();
-
-    if (changes[enabledHostsStorageKey]) {
-      renderHighlights();
-      return;
-    }
-
-    applyHighlight();
+    // Re-collect on every change: cached offsets go stale once the page edits
+    // its own text, and a stale offset throws when the range is rebuilt.
+    renderHighlights();
   })();
 });
 
