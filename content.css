@@ -1,25 +1,7 @@
-.vocab-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2147483647;
-  --vocab-overlay-color: #f87171;
-}
-
-.vocab-unknown {
-  position: absolute;
-  margin: 0;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--vocab-overlay-color) 45%, transparent);
-  background: color-mix(in srgb, var(--vocab-overlay-color) 18%, transparent);
-  border-radius: 2px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
-  cursor: pointer;
-  pointer-events: auto;
-  appearance: none;
-  -webkit-appearance: none;
-  user-select: none;
-  -webkit-user-select: none;
-  color: transparent;
-  overflow: hidden;
+::highlight(vocab-unknown) {
+  background-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 18%, transparent);
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 60%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }

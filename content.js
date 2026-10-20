@@ -20,10 +20,16 @@ const defaultDoubleClickAction = "mark-known";
 const defaultOverlayColor = "#f87171";
 const defaultSearchKeyword = "読み方";
 
-const unknownWordClassName = "vocab-unknown";
-const overlayClassName = "vocab-overlay";
+const highlightName = "vocab-unknown";
+const highlightColorVariableName = "--vocab-overlay-color";
+const clickDelay = 220;
 let tokenizerPromise = null;
 let tokenizer = null;
+let tokens = [];
+let tokenIndex = new WeakMap();
+let clickTimer = null;
+let cursorFrame = 0;
+let cursorIsPointer = false;
 
 async function loadState() {
   const result = await getLocalStorage([
@@ -93,7 +99,6 @@ function isIgnorableElement(element) {
 
 function shouldProcessTextNode(node) {
   if (!node.parentElement) return false;
-  if (node.parentElement.closest(`.${overlayClassName}`)) return false;
   if (isIgnorableElement(node.parentElement)) return false;
   if (!node.textContent.trim()) return false;
   return true;
@@ -152,9 +157,9 @@ function getTokenizer() {
   return tokenizerPromise;
 }
 
-function collectUnknownTokens(root) {
+function collectTokens(root) {
   const textNodes = collectTextNodes(root);
-  const tokens = [];
+  const collected = [];
 
   textNodes.forEach(function (textNode) {
     const text = textNode.textContent;
@@ -176,12 +181,9 @@ function collectUnknownTokens(root) {
         continue;
       }
 
-      if (isKnownToken(word, basic)) {
-        continue;
-      }
-
-      tokens.push({
+      collected.push({
         word: word,
+        basic: basic,
         node: textNode,
         startOffset: startOffset,
         endOffset: endOffset,
@@ -189,22 +191,50 @@ function collectUnknownTokens(root) {
     }
   });
 
-  return tokens;
+  return collected;
 }
 
-function removeOverlay() {
-  const existingOverlay = document.querySelector(`.${overlayClassName}`);
-  if (existingOverlay) {
-    existingOverlay.remove();
+function buildTokenIndex(collected) {
+  const index = new WeakMap();
+
+  collected.forEach(function (token) {
+    const nodeTokens = index.get(token.node);
+    if (nodeTokens) {
+      nodeTokens.push(token);
+      return;
+    }
+
+    index.set(token.node, [token]);
+  });
+
+  return index;
+}
+
+function applyHighlight() {
+  const ranges = [];
+
+  document.documentElement.style.setProperty(
+    highlightColorVariableName,
+    interactionSettings.overlayColor
+  );
+
+  tokens.forEach(function (token) {
+    if (isKnownToken(token.word, token.basic)) {
+      return;
+    }
+
+    const range = document.createRange();
+    range.setStart(token.node, token.startOffset);
+    range.setEnd(token.node, token.endOffset);
+    ranges.push(range);
+  });
+
+  if (ranges.length === 0) {
+    CSS.highlights.delete(highlightName);
+    return;
   }
-}
 
-function createOverlay() {
-  const overlay = document.createElement("div");
-  overlay.className = overlayClassName;
-  overlay.style.setProperty("--vocab-overlay-color", interactionSettings.overlayColor);
-  document.body.appendChild(overlay);
-  return overlay;
+  CSS.highlights.set(highlightName, new Highlight(...ranges));
 }
 
 function openSearch(word) {
@@ -214,14 +244,114 @@ function openSearch(word) {
   window.open(searchUrl, "_blank");
 }
 
-function getActionLabel(action, word) {
-  if (action === "mark-known") {
-    return `mark \"${word}\" as known`;
+function isEditableTarget(target) {
+  if (!(target instanceof Element)) {
+    return false;
   }
 
-  return `search \"${interactionSettings.searchKeyword}\" with ${getSearchEngineLabel(
-    interactionSettings.searchEngine
-  )}`;
+  return Boolean(target.closest("input, textarea, select, [contenteditable]"));
+}
+
+function tokenAtPoint(x, y) {
+  if (typeof document.caretPositionFromPoint !== "function") {
+    return null;
+  }
+
+  const position = document.caretPositionFromPoint(x, y);
+  if (!position || position.offsetNode.nodeType !== Node.TEXT_NODE) {
+    return null;
+  }
+
+  const nodeTokens = tokenIndex.get(position.offsetNode);
+  if (!nodeTokens) {
+    return null;
+  }
+
+  // A caret on the right half of a character lands after it, so the previous
+  // offset also has to be tried before deciding the click missed.
+  const offsets = [position.offset, position.offset - 1];
+  for (const offset of offsets) {
+    const token = nodeTokens.find(function (candidate) {
+      return (
+        offset >= candidate.startOffset &&
+        offset < candidate.endOffset &&
+        !isKnownToken(candidate.word, candidate.basic)
+      );
+    });
+
+    if (token) {
+      return token;
+    }
+  }
+
+  return null;
+}
+
+function setPointerCursor(enabled) {
+  if (enabled === cursorIsPointer) {
+    return;
+  }
+
+  cursorIsPointer = enabled;
+  document.documentElement.style.cursor = enabled ? "pointer" : "";
+}
+
+function handlePointerMove(event) {
+  if (cursorFrame !== 0) {
+    return;
+  }
+
+  const x = event.clientX;
+  const y = event.clientY;
+
+  cursorFrame = requestAnimationFrame(function () {
+    cursorFrame = 0;
+    setPointerCursor(tokenAtPoint(x, y) !== null);
+  });
+}
+
+function handleClick(event) {
+  if (isEditableTarget(event.target)) {
+    return;
+  }
+
+  const token = tokenAtPoint(event.clientX, event.clientY);
+  if (token === null) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (clickTimer !== null) {
+    clearTimeout(clickTimer);
+  }
+
+  clickTimer = window.setTimeout(function () {
+    clickTimer = null;
+    runAction(interactionSettings.clickAction, token.word);
+  }, clickDelay);
+}
+
+function handleDoubleClick(event) {
+  if (isEditableTarget(event.target)) {
+    return;
+  }
+
+  const token = tokenAtPoint(event.clientX, event.clientY);
+  if (token === null) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (clickTimer !== null) {
+    clearTimeout(clickTimer);
+    clickTimer = null;
+  }
+
+  runAction(interactionSettings.doubleClickAction, token.word);
 }
 
 function runAction(action, word) {
@@ -233,99 +363,10 @@ function runAction(action, word) {
   openSearch(word);
 }
 
-function createHighlightBoxes(token, overlay) {
-  const range = document.createRange();
-  range.setStart(token.node, token.startOffset);
-  range.setEnd(token.node, token.endOffset);
-
-  const rects = Array.from(range.getClientRects());
-  rects.forEach(function (rect) {
-    if (rect.width === 0 || rect.height === 0) {
-      return;
-    }
-
-    const box = document.createElement("button");
-    let clickTimer = null;
-    box.type = "button";
-    box.className = unknownWordClassName;
-    box.dataset.word = token.word;
-    box.style.left = `${window.scrollX + rect.left}px`;
-    box.style.top = `${window.scrollY + rect.top}px`;
-    box.style.width = `${rect.width}px`;
-    box.style.height = `${rect.height}px`;
-    box.title = `Click: ${getActionLabel(
-      interactionSettings.clickAction,
-      token.word
-    )} | Double-click: ${getActionLabel(
-      interactionSettings.doubleClickAction,
-      token.word
-    )}`;
-    box.addEventListener("mousedown", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    box.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (clickTimer !== null) {
-        clearTimeout(clickTimer);
-      }
-
-      clickTimer = window.setTimeout(function () {
-        clickTimer = null;
-        runAction(interactionSettings.clickAction, token.word);
-      }, 220);
-    });
-    box.addEventListener("dblclick", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (clickTimer !== null) {
-        clearTimeout(clickTimer);
-        clickTimer = null;
-      }
-
-      runAction(interactionSettings.doubleClickAction, token.word);
-    });
-    overlay.appendChild(box);
-  });
-}
-
-let renderGeneration = 0;
-
-async function renderHighlights() {
-  const generation = ++renderGeneration;
-
-  removeOverlay();
-
-  if (!isSiteEnabled || tokenizer === null) {
-    return;
-  }
-
-  const overlay = createOverlay();
-  const tokens = collectUnknownTokens(document.body);
-  const BATCH_SIZE = 20;
-
-  for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
-    // A newer render supersedes this one mid-batch; stop appending to the stale overlay.
-    if (generation !== renderGeneration) {
-      return;
-    }
-
-    const batch = tokens.slice(i, i + BATCH_SIZE);
-    await new Promise(function (resolve) {
-      requestAnimationFrame(function () {
-        batch.forEach(function (token) {
-          createHighlightBoxes(token, overlay);
-        });
-        resolve();
-      });
-    });
-    if (globalThis.scheduler?.yield) {
-      await scheduler.yield();
-    }
-  }
+function renderHighlights() {
+  tokens = isSiteEnabled && tokenizer !== null ? collectTokens(document.body) : [];
+  tokenIndex = buildTokenIndex(tokens);
+  applyHighlight();
 }
 
 async function addToKnownWords(word) {
@@ -359,12 +400,23 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
 
   void (async function () {
     await loadState();
-    renderHighlights();
+
+    if (changes[enabledHostsStorageKey]) {
+      renderHighlights();
+      return;
+    }
+
+    applyHighlight();
   })();
 });
 
 async function initializeHighlights() {
+  if (!("highlights" in CSS) || typeof Highlight !== "function") {
+    return;
+  }
+
   await loadState();
+
   try {
     await getTokenizer();
   } catch (error) {
@@ -379,20 +431,11 @@ async function initializeHighlights() {
   }
 }
 
+document.addEventListener("click", handleClick, true);
+document.addEventListener("dblclick", handleDoubleClick, true);
+document.addEventListener("pointermove", handlePointerMove, { passive: true });
+document.addEventListener("pointerleave", function () {
+  setPointerCursor(false);
+});
+
 void initializeHighlights();
-
-let renderScheduled = false;
-
-function scheduleRenderHighlights() {
-  if (renderScheduled) {
-    return;
-  }
-
-  renderScheduled = true;
-  requestAnimationFrame(function () {
-    renderScheduled = false;
-    void renderHighlights();
-  });
-}
-
-window.addEventListener("resize", scheduleRenderHighlights);

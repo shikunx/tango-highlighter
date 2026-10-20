@@ -12,14 +12,6 @@ const searchEngineOptions = [
   { value: "brave", label: "Brave Search" },
 ];
 
-function getSearchEngineLabel(searchEngine) {
-  const matchedOption = searchEngineOptions.find(function (option) {
-    return option.value === searchEngine;
-  });
-
-  return matchedOption ? matchedOption.label : "Google";
-}
-
 function buildSearchEngineUrl(searchEngine, query) {
   if (searchEngine === "google-japan") {
     return `https://www.google.co.jp/search?q=${query}`;
