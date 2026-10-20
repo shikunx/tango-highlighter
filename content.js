@@ -20,7 +20,7 @@ const defaultDoubleClickAction = "mark-known";
 const defaultOverlayColor = "#f87171";
 const defaultSearchKeyword = "読み方";
 
-const highlightName = "vocab-unknown";
+const highlightNames = ["vocab-unknown-a", "vocab-unknown-b"];
 const highlightColorVariableName = "--vocab-overlay-color";
 const clickDelay = 220;
 let tokenizerPromise = null;
@@ -211,13 +211,14 @@ function buildTokenIndex(collected) {
 }
 
 function applyHighlight() {
-  const ranges = [];
+  const groups = [[], []];
 
   document.documentElement.style.setProperty(
     highlightColorVariableName,
     interactionSettings.overlayColor
   );
 
+  let highlightedIndex = 0;
   tokens.forEach(function (token) {
     if (isKnownToken(token.word, token.basic)) {
       return;
@@ -226,15 +227,20 @@ function applyHighlight() {
     const range = document.createRange();
     range.setStart(token.node, token.startOffset);
     range.setEnd(token.node, token.endOffset);
-    ranges.push(range);
+    groups[highlightedIndex % groups.length].push(range);
+    highlightedIndex += 1;
   });
 
-  if (ranges.length === 0) {
-    CSS.highlights.delete(highlightName);
-    return;
-  }
+  highlightNames.forEach(function (name, groupIndex) {
+    const ranges = groups[groupIndex];
 
-  CSS.highlights.set(highlightName, new Highlight(...ranges));
+    if (ranges.length === 0) {
+      CSS.highlights.delete(name);
+      return;
+    }
+
+    CSS.highlights.set(name, new Highlight(...ranges));
+  });
 }
 
 function openSearch(word) {

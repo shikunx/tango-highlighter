@@ -1,7 +1,21 @@
-::highlight(vocab-unknown) {
-  background-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 18%, transparent);
+/* Y-statement: facing per-word boundaries that people read as one blob when a
+ * single tint runs across adjacent words, we chose alternating tint depths over
+ * inline span wrapping, trading a softer boundary for zero page DOM changes,
+ * because ::highlight() only accepts paint properties (border and radius are
+ * dropped) and wrapping text nodes risks conflicts with page frameworks on any
+ * site the user enables. */
+::highlight(vocab-unknown-a) {
+  background-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 12%, transparent);
   text-decoration-line: underline;
-  text-decoration-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 60%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 45%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+::highlight(vocab-unknown-b) {
+  background-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 28%, transparent);
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 45%, transparent);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
