@@ -10,6 +10,7 @@ You can also click a highlighted word on the page to save it.
 
 - saves your known words and settings in the browser
 - highlights words you have not saved yet
+- skips content that declares a non-Japanese `lang` (undeclared content is still processed, since Aozora pages carry no `lang` attribute)
 - lets you manage the known word list from the popup
 - lets you turn highlighting on or off for each site
 

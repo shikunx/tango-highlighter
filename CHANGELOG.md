@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2026-10-20 (skip content declared as a non-Japanese language)
+
+- Added: text nodes are filtered by their nearest `lang` declaration. Content explicitly declared as another language (zh, en, and so on) is no longer tokenized or highlighted. Undeclared and empty declarations are still processed, because Aozora pages carry no `lang` attribute.
+
 ## 2026-10-20 (highlights rendered with the CSS Custom Highlight API)
 
 - Changed: page highlights moved from absolutely positioned overlay buttons to the CSS Custom Highlight API, so clipping and scrolling are left to the browser. Pages no longer get a horizontal scrollbar, and highlights inside horizontally scrolling containers no longer drift.

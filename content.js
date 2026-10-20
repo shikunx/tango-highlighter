@@ -97,9 +97,26 @@ function isIgnorableElement(element) {
   );
 }
 
+// Aozora pages declare no lang at all, so an undeclared context stays eligible.
+// Only an explicit, different language is a reason to skip.
+function isJapaneseLangContext(element) {
+  const holder = element.closest("[lang]");
+  if (holder === null) {
+    return true;
+  }
+
+  const lang = holder.getAttribute("lang").trim();
+  if (lang === "") {
+    return true;
+  }
+
+  return /^ja($|-)/i.test(lang);
+}
+
 function shouldProcessTextNode(node) {
   if (!node.parentElement) return false;
   if (isIgnorableElement(node.parentElement)) return false;
+  if (!isJapaneseLangContext(node.parentElement)) return false;
   if (!node.textContent.trim()) return false;
   return true;
 }
