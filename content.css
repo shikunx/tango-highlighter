@@ -5,17 +5,17 @@
  * dropped) and wrapping text nodes risks conflicts with page frameworks on any
  * site the user enables. */
 ::highlight(vocab-unknown-a) {
-  background-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 12%, transparent);
+  background-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 18%, transparent);
   text-decoration-line: underline;
-  text-decoration-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 45%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 55%, transparent);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
 
 ::highlight(vocab-unknown-b) {
-  background-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 28%, transparent);
+  background-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 48%, transparent);
   text-decoration-line: underline;
-  text-decoration-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 45%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--vocab-overlay-color, #f87171) 55%, transparent);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
