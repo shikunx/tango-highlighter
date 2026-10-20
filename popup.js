@@ -1,11 +1,7 @@
-const clickActionStorageKey = "clickAction";
-const doubleClickActionStorageKey = "doubleClickAction";
 const overlayColorStorageKey = "overlayColor";
 const searchEngineStorageKey = "searchEngine";
 const searchKeywordStorageKey = "searchKeyword";
 const enabledHostsStorageKey = "enabledHosts";
-const defaultClickAction = "search-reading";
-const defaultDoubleClickAction = "mark-known";
 const defaultOverlayColor = "#f87171";
 const defaultSearchKeyword = "読み方";
 
@@ -26,17 +22,12 @@ async function loadStoredWords() {
 
 async function loadInteractionSettings() {
   const result = await getLocalStorage([
-    clickActionStorageKey,
-    doubleClickActionStorageKey,
     overlayColorStorageKey,
     searchEngineStorageKey,
     searchKeywordStorageKey,
   ]);
 
   return {
-    clickAction: result[clickActionStorageKey] || defaultClickAction,
-    doubleClickAction:
-      result[doubleClickActionStorageKey] || defaultDoubleClickAction,
     overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
     searchEngine: result[searchEngineStorageKey] || defaultSearchEngine,
     searchKeyword: result[searchKeywordStorageKey] || defaultSearchKeyword,
@@ -107,15 +98,11 @@ async function toggleCurrentSite() {
 }
 
 async function saveInteractionSettings() {
-  const clickAction = document.getElementById("clickAction").value;
-  const doubleClickAction = document.getElementById("doubleClickAction").value;
   const overlayColor = document.getElementById("overlayColor").value;
   const searchEngine = document.getElementById("searchEngine").value;
   const searchKeyword = document.getElementById("searchKeyword").value.trim();
 
   await setLocalStorage({
-    [clickActionStorageKey]: clickAction,
-    [doubleClickActionStorageKey]: doubleClickAction,
     [overlayColorStorageKey]: overlayColor,
     [searchEngineStorageKey]: searchEngine,
     [searchKeywordStorageKey]: searchKeyword || defaultSearchKeyword,
@@ -124,9 +111,6 @@ async function saveInteractionSettings() {
 
 async function loadSettings() {
   const settings = await loadInteractionSettings();
-  document.getElementById("clickAction").value = settings.clickAction;
-  document.getElementById("doubleClickAction").value =
-    settings.doubleClickAction;
   document.getElementById("searchEngine").value = settings.searchEngine;
   document.getElementById("searchKeyword").value = settings.searchKeyword;
   document.getElementById("overlayColor").value = settings.overlayColor;
@@ -272,10 +256,6 @@ document.getElementById("wordInput").addEventListener("keydown", function (e) {
   }
 });
 document.getElementById("toggleSiteBtn").addEventListener("click", toggleCurrentSite);
-document.getElementById("clickAction").addEventListener("change", saveInteractionSettings);
-document
-  .getElementById("doubleClickAction")
-  .addEventListener("change", saveInteractionSettings);
 document.getElementById("searchEngine").addEventListener("change", saveInteractionSettings);
 document.getElementById("searchKeyword").addEventListener("input", saveInteractionSettings);
 document.getElementById("overlayColor").addEventListener("input", saveInteractionSettings);

@@ -1,42 +1,39 @@
 let knownWords = [];
 let knownWordSet = new Set();
 let interactionSettings = {
-  clickAction: "search-reading",
-  doubleClickAction: "mark-known",
   overlayColor: "#f87171",
   searchEngine: "google",
   searchKeyword: "読み方",
 };
 let isSiteEnabled = false;
 
-const clickActionStorageKey = "clickAction";
-const doubleClickActionStorageKey = "doubleClickAction";
 const overlayColorStorageKey = "overlayColor";
 const searchEngineStorageKey = "searchEngine";
 const searchKeywordStorageKey = "searchKeyword";
 const enabledHostsStorageKey = "enabledHosts";
-const defaultClickAction = "search-reading";
-const defaultDoubleClickAction = "mark-known";
 const defaultOverlayColor = "#f87171";
 const defaultSearchKeyword = "読み方";
 
 const highlightNames = ["vocab-unknown-a", "vocab-unknown-b"];
 const highlightColorVariableName = "--vocab-overlay-color";
-const clickDelay = 220;
+const bubbleGap = 8;
+const bubbleViewportPadding = 8;
 let tokenizerPromise = null;
 let tokenizer = null;
 let tokens = [];
 let tokenIndex = new WeakMap();
-let clickTimer = null;
 let cursorFrame = 0;
 let cursorIsPointer = false;
+let bubbleHost = null;
+let bubbleElement = null;
+let bubbleToken = null;
+let bubbleRange = null;
+let bubbleFrame = 0;
 
 async function loadState() {
   const result = await getLocalStorage([
     "knownWords",
     "knownWordsInitialized",
-    clickActionStorageKey,
-    doubleClickActionStorageKey,
     overlayColorStorageKey,
     searchEngineStorageKey,
     searchKeywordStorageKey,
@@ -54,9 +51,6 @@ async function loadState() {
   }
 
   interactionSettings = {
-    clickAction: result[clickActionStorageKey] || defaultClickAction,
-    doubleClickAction:
-      result[doubleClickActionStorageKey] || defaultDoubleClickAction,
     overlayColor: result[overlayColorStorageKey] || defaultOverlayColor,
     searchEngine: result[searchEngineStorageKey] || defaultSearchEngine,
     searchKeyword: result[searchKeywordStorageKey] || defaultSearchKeyword,
@@ -333,7 +327,157 @@ function handlePointerMove(event) {
   });
 }
 
+function ensureBubble() {
+  if (bubbleHost !== null) {
+    return;
+  }
+
+  bubbleHost = document.createElement("div");
+  bubbleHost.style.cssText =
+    "all: initial; position: fixed; top: 0; left: 0; z-index: 2147483647;";
+
+  // Styles live in a shadow root so page rules cannot restyle the bubble.
+  const shadow = bubbleHost.attachShadow({ mode: "closed" });
+  const style = document.createElement("style");
+  style.textContent = `
+    .bubble { display: flex; gap: 4px; padding: 4px; border-radius: 4px; background: #222; }
+    .bubble[hidden] { display: none; }
+    button { min-height: 40px; padding: 0 12px; border: 0; border-radius: 4px; background: transparent; color: #fff; font: 16px sans-serif; cursor: pointer; white-space: nowrap; }
+    button:active { background: rgba(255, 255, 255, 0.18); }
+  `;
+
+  bubbleElement = document.createElement("div");
+  bubbleElement.className = "bubble";
+  bubbleElement.hidden = true;
+
+  [
+    ["search", "Search"],
+    ["mark-known", "Mark as known"],
+  ].forEach(function (entry) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.action = entry[0];
+    button.textContent = entry[1];
+    bubbleElement.appendChild(button);
+  });
+
+  bubbleElement.addEventListener("click", handleBubbleClick);
+  shadow.append(style, bubbleElement);
+}
+
+function handleBubbleClick(event) {
+  const button = event.target.closest("button");
+  if (!button) {
+    return;
+  }
+
+  const token = bubbleToken;
+  hideWordBubble();
+
+  if (token === null) {
+    return;
+  }
+
+  if (button.dataset.action === "mark-known") {
+    addToKnownWords(token.word);
+    return;
+  }
+
+  openSearch(token.word);
+}
+
+function showWordBubble(token) {
+  ensureBubble();
+
+  bubbleToken = token;
+  bubbleRange = document.createRange();
+  bubbleRange.setStart(token.node, token.startOffset);
+  bubbleRange.setEnd(token.node, token.endOffset);
+
+  if (bubbleHost.parentNode === null) {
+    document.body.append(bubbleHost);
+  }
+
+  bubbleElement.hidden = false;
+  placeBubble();
+}
+
+function hideWordBubble() {
+  bubbleToken = null;
+  bubbleRange = null;
+
+  if (bubbleElement !== null) {
+    bubbleElement.hidden = true;
+  }
+}
+
+function placeBubble() {
+  if (bubbleRange === null) {
+    return;
+  }
+
+  const rects = Array.from(bubbleRange.getClientRects()).filter(function (rect) {
+    return rect.width > 0 && rect.height > 0;
+  });
+
+  if (rects.length === 0) {
+    hideWordBubble();
+    return;
+  }
+
+  const first = rects[0];
+  const last = rects[rects.length - 1];
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight;
+
+  if (
+    last.bottom < 0 ||
+    first.top > viewportHeight ||
+    last.right < 0 ||
+    first.left > viewportWidth
+  ) {
+    hideWordBubble();
+    return;
+  }
+
+  const width = bubbleElement.offsetWidth;
+  const height = bubbleElement.offsetHeight;
+  let left = last.left + last.width / 2 - width / 2;
+  let top = last.bottom + bubbleGap;
+
+  if (top + height > viewportHeight - bubbleViewportPadding) {
+    top = first.top - bubbleGap - height;
+  }
+
+  left = Math.min(
+    Math.max(left, bubbleViewportPadding),
+    viewportWidth - width - bubbleViewportPadding
+  );
+  top = Math.min(
+    Math.max(top, bubbleViewportPadding),
+    viewportHeight - height - bubbleViewportPadding
+  );
+
+  bubbleHost.style.left = `${left}px`;
+  bubbleHost.style.top = `${top}px`;
+}
+
+function scheduleBubblePlacement() {
+  if (bubbleRange === null || bubbleFrame !== 0) {
+    return;
+  }
+
+  bubbleFrame = requestAnimationFrame(function () {
+    bubbleFrame = 0;
+    placeBubble();
+  });
+}
+
 function handleClick(event) {
+  if (bubbleHost !== null && event.composedPath().includes(bubbleHost)) {
+    return;
+  }
+
   if (isEditableTarget(event.target)) {
     return;
   }
@@ -345,48 +489,29 @@ function handleClick(event) {
 
   event.preventDefault();
   event.stopPropagation();
-
-  if (clickTimer !== null) {
-    clearTimeout(clickTimer);
-  }
-
-  clickTimer = window.setTimeout(function () {
-    clickTimer = null;
-    runAction(interactionSettings.clickAction, token.word);
-  }, clickDelay);
+  showWordBubble(token);
 }
 
-function handleDoubleClick(event) {
-  if (isEditableTarget(event.target)) {
+function handleOutsidePointerDown(event) {
+  if (bubbleRange === null) {
     return;
   }
 
-  const token = tokenAtPoint(event.clientX, event.clientY);
-  if (token === null) {
+  if (bubbleHost !== null && event.composedPath().includes(bubbleHost)) {
     return;
   }
 
-  event.preventDefault();
-  event.stopPropagation();
-
-  if (clickTimer !== null) {
-    clearTimeout(clickTimer);
-    clickTimer = null;
-  }
-
-  runAction(interactionSettings.doubleClickAction, token.word);
+  hideWordBubble();
 }
 
-function runAction(action, word) {
-  if (action === "mark-known") {
-    addToKnownWords(word);
-    return;
+function handleKeyDown(event) {
+  if (event.key === "Escape") {
+    hideWordBubble();
   }
-
-  openSearch(word);
 }
 
 function renderHighlights() {
+  hideWordBubble();
   tokens = isSiteEnabled && tokenizer !== null ? collectTokens(document.body) : [];
   tokenIndex = buildTokenIndex(tokens);
   applyHighlight();
@@ -411,8 +536,6 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
 
   if (
     !changes.knownWords &&
-    !changes[clickActionStorageKey] &&
-    !changes[doubleClickActionStorageKey] &&
     !changes[overlayColorStorageKey] &&
     !changes[searchEngineStorageKey] &&
     !changes[searchKeywordStorageKey] &&
@@ -451,10 +574,25 @@ async function initializeHighlights() {
 }
 
 document.addEventListener("click", handleClick, true);
-document.addEventListener("dblclick", handleDoubleClick, true);
+document.addEventListener("pointerdown", handleOutsidePointerDown, true);
+document.addEventListener("keydown", handleKeyDown);
 document.addEventListener("pointermove", handlePointerMove, { passive: true });
 document.addEventListener("pointerleave", function () {
   setPointerCursor(false);
 });
+// Capture phase so scrolling inside nested containers also repositions the bubble.
+document.addEventListener("scroll", scheduleBubblePlacement, {
+  capture: true,
+  passive: true,
+});
+window.addEventListener("resize", scheduleBubblePlacement, { passive: true });
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", scheduleBubblePlacement, {
+    passive: true,
+  });
+  window.visualViewport.addEventListener("scroll", scheduleBubblePlacement, {
+    passive: true,
+  });
+}
 
 void initializeHighlights();

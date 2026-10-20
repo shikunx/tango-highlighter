@@ -4,7 +4,7 @@ A Chrome extension for Japanese reading practice.
 
 It highlights Japanese words you have not saved yet and lets you manage your known words from the popup.
 It uses bundled vibrato (wasm) tokenization with an IPADIC dictionary for Japanese word splitting.
-You can also click a highlighted word on the page to save it.
+You can also click a highlighted word to open a small bubble with search and mark-as-known actions.
 
 ## What it does
 
@@ -44,7 +44,7 @@ The extension can run on any page, but highlighting only appears on sites you en
 3. Enable highlighting for the current site.
 4. Add words you already know.
 5. Unknown Japanese words on the page will be highlighted.
-6. Click a highlighted word on the page to add it to your known words.
+6. Click a highlighted word to open the action bubble, then choose Search or Mark as known.
 
 ## Notes
 

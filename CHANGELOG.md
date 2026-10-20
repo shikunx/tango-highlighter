@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2026-10-20 (word actions moved into a bubble)
+
+- Changed: clicking a highlighted word opens a bubble anchored to the word with Search and Mark as known buttons. Double-click no longer runs an action of its own.
+- Changed: the bubble follows the word on scroll, including scrolling inside nested containers, and closes on outside click, on Escape, or when the word leaves the viewport. Its styles live in a shadow root so page CSS cannot restyle it.
+- Removed: the Click and Double-click action settings in the popup, along with the 220 ms click delay they required.
+
 ## 2026-10-20 (skip content declared as a non-Japanese language)
 
 - Added: text nodes are filtered by their nearest `lang` declaration. Content explicitly declared as another language (zh, en, and so on) is no longer tokenized or highlighted. Undeclared and empty declarations are still processed, because Aozora pages carry no `lang` attribute.
