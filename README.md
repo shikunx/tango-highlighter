@@ -13,6 +13,7 @@ You can also click a highlighted word to open a small bubble with search and mar
 - skips content that declares a non-Japanese `lang` (undeclared content is still processed, since Aozora pages carry no `lang` attribute)
 - lets you manage the known word list from the popup
 - lets you turn highlighting on or off for each site
+- syncs your known words across devices when a sync code is activated
 
 ## Files
 
@@ -45,9 +46,11 @@ The extension can run on any page, but highlighting only appears on sites you en
 4. Add words you already know.
 5. Unknown Japanese words on the page will be highlighted.
 6. Click a highlighted word to open the action bubble, then choose Search or Mark as known.
+7. Optionally, enter your activation code in the popup's Sync section. Sync now merges your word list across devices, and changes are pushed automatically shortly after.
 
 ## Notes
 
 - This project uses plain HTML, CSS, and JavaScript.
 - Japanese tokenization is provided by the bundled vibrato wasm build and IPADIC dictionary in `vendor/vibrato/`.
 - Known words and settings stay in your browser.
+- Word sync talks to `tango.fanshikun.com`; activation codes come with the sync subscription.
