@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2026-11-13 (known-word list stored as one string)
+
+- Changed: the known-word list is stored as a single newline-joined string instead of a JSON array, matching the import and export file format. Existing word lists migrate to the new format on first load.
+
 ## 2026-11-13 (stable highlight tints)
 
 - Changed: highlight tints alternate by the order of all tokens rather than only unknown ones, so marking a word known no longer repaints the other highlights on the page. Directly adjacent unknown words still always get different tints.

@@ -1,4 +1,3 @@
-let knownWords = [];
 let knownWordSet = new Set();
 let interactionSettings = {
   overlayColor: "#f87171",
@@ -41,13 +40,20 @@ async function loadState() {
   ]);
 
   if (result.knownWordsInitialized) {
-    setKnownWords(result.knownWords || []);
+    const stored = result.knownWords;
+    let text = typeof stored === "string" ? stored : "";
+    // One-time migration from the old string-array format.
+    if (Array.isArray(stored)) {
+      text = stored.join("\n");
+      await setLocalStorage({ knownWords: text });
+    }
+    setKnownWords(text);
   } else {
     await setLocalStorage({
       knownWords: defaultKnownWords,
       knownWordsInitialized: true,
     });
-    setKnownWords([...defaultKnownWords]);
+    setKnownWords(defaultKnownWords);
   }
 
   interactionSettings = {
@@ -60,9 +66,8 @@ async function loadState() {
   isSiteEnabled = enabledHosts.includes(window.location.hostname);
 }
 
-function setKnownWords(words) {
-  knownWords = words;
-  knownWordSet = new Set(words);
+function setKnownWords(text) {
+  knownWordSet = new Set(text ? text.split("\n") : []);
 }
 
 function isKnownToken(surface, basic) {
@@ -525,14 +530,13 @@ function renderHighlights() {
 
 async function addToKnownWords(word) {
   await loadState();
-  const words = [...knownWords];
-  if (words.includes(word)) {
+  if (knownWordSet.has(word)) {
     return;
   }
 
-  words.push(word);
+  knownWordSet.add(word);
+  const words = Array.from(knownWordSet).join("\n");
   await setLocalStorage({ knownWords: words });
-  setKnownWords(words);
 }
 
 chrome.storage.onChanged.addListener(function (changes, areaName) {

@@ -10,14 +10,21 @@ let currentTabHost = null;
 async function loadStoredWords() {
   const result = await getLocalStorage(["knownWords", "knownWordsInitialized"]);
   if (result.knownWordsInitialized) {
-    return result.knownWords || [];
+    const stored = result.knownWords;
+    let text = typeof stored === "string" ? stored : "";
+    // One-time migration from the old string-array format.
+    if (Array.isArray(stored)) {
+      text = stored.join("\n");
+      await setLocalStorage({ knownWords: text });
+    }
+    return text ? text.split("\n") : [];
   }
 
   await setLocalStorage({
     knownWords: defaultKnownWords,
     knownWordsInitialized: true,
   });
-  return [...defaultKnownWords];
+  return defaultKnownWords.split("\n");
 }
 
 async function loadInteractionSettings() {
@@ -157,7 +164,7 @@ async function addWord() {
   }
 
   knownWords.push(word);
-  await setLocalStorage({ knownWords: knownWords });
+  await setLocalStorage({ knownWords: knownWords.join("\n") });
   input.value = "";
   loadWords();
 }
@@ -168,14 +175,14 @@ async function deleteWord(word) {
 
   if (index > -1) {
     knownWords.splice(index, 1);
-    await setLocalStorage({ knownWords: knownWords });
+    await setLocalStorage({ knownWords: knownWords.join("\n") });
     loadWords();
   }
 }
 
 async function clearAllWords() {
   if (confirm("Are you sure you want to clear all known words?")) {
-    await setLocalStorage({ knownWords: [] });
+    await setLocalStorage({ knownWords: "" });
     loadWords();
   }
 }
@@ -235,7 +242,7 @@ function importWords(event) {
         }
 
         await setLocalStorage({
-          knownWords: uniqueWords,
+          knownWords: uniqueWords.join("\n"),
           knownWordsInitialized: true,
         });
         loadWords();

@@ -19,5 +19,6 @@ Tango Highlighter is a plain HTML/CSS/JavaScript Chrome extension for Japanese r
 
 ## Notes
 - The extension matches all pages unless the user asks to narrow it.
+- Store known words as the exact strings users marked; do not normalize them to dictionary forms.
 - Keep user-facing text concise and simple.
 - Write commit messages and CHANGELOG entries in English.
