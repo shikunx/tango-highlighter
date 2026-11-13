@@ -229,17 +229,23 @@ function applyHighlight() {
     interactionSettings.overlayColor
   );
 
-  let highlightedIndex = 0;
+  // Tints alternate by the index across all tokens, not just unknown ones:
+  // indexing only unknown words shifts every later tint whenever a word is
+  // marked known, repainting the whole page. Two directly adjacent unknown
+  // tokens have no room for another token between them, so their indexes
+  // always differ by one and their tints always differ.
+  let tokenOrdinal = 0;
   tokens.forEach(function (token) {
-    if (isKnownToken(token.word, token.basic)) {
-      return;
+    const unknown = !isKnownToken(token.word, token.basic);
+
+    if (unknown) {
+      const range = document.createRange();
+      range.setStart(token.node, token.startOffset);
+      range.setEnd(token.node, token.endOffset);
+      groups[tokenOrdinal % groups.length].push(range);
     }
 
-    const range = document.createRange();
-    range.setStart(token.node, token.startOffset);
-    range.setEnd(token.node, token.endOffset);
-    groups[highlightedIndex % groups.length].push(range);
-    highlightedIndex += 1;
+    tokenOrdinal += 1;
   });
 
   highlightNames.forEach(function (name, groupIndex) {

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2026-11-13 (stable highlight tints)
+
+- Changed: highlight tints alternate by the order of all tokens rather than only unknown ones, so marking a word known no longer repaints the other highlights on the page. Directly adjacent unknown words still always get different tints.
+
 ## 2026-10-20 (word actions moved into a bubble)
 
 - Changed: clicking a highlighted word opens a bubble anchored to the word with Search and Mark as known buttons. Double-click no longer runs an action of its own.
