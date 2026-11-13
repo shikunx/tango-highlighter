@@ -5,6 +5,10 @@
   "minimum_chrome_version": "128",
   "description": "Highlight Japanese words you don’t know.",
   "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://tango.fanshikun.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "icons": {
     "16": "icon/16.png",
     "32": "icon/32.png",

@@ -275,7 +275,56 @@ document
 document.getElementById("exportBtn").addEventListener("click", exportWords);
 document.getElementById("clearAllBtn").addEventListener("click", clearAllWords);
 
+async function loadSyncState() {
+  const activated = await isSyncActivated();
+  document.getElementById("syncActivateRow").hidden = !activated;
+  document.getElementById("syncActiveRow").hidden = activated;
+}
+
+async function handleSyncNow() {
+  const status = document.getElementById("syncStatus");
+  try {
+    const knownWords = await loadStoredWords();
+    const { text, changed } = await runSync(knownWords.join("\n"));
+    if (changed) {
+      await setLocalStorage({ knownWords: text });
+      loadWords();
+    }
+    const syncedCount = text ? text.split("\n").length : 0;
+    status.textContent = `Synced ${syncedCount} words`;
+  } catch (error) {
+    status.textContent = error.message;
+  }
+}
+
+async function handleActivateSync() {
+  const input = document.getElementById("syncCodeInput");
+  const code = input.value.trim();
+  if (!code) {
+    return;
+  }
+
+  const status = document.getElementById("syncStatus");
+  try {
+    await activateSync(code);
+    input.value = "";
+    await loadSyncState();
+    await handleSyncNow();
+  } catch (error) {
+    status.textContent = error.message;
+  }
+}
+
+document.getElementById("activateSyncBtn").addEventListener("click", handleActivateSync);
+document.getElementById("syncCodeInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && !e.isComposing) {
+    handleActivateSync();
+  }
+});
+document.getElementById("syncNowBtn").addEventListener("click", handleSyncNow);
+
 renderSearchEngineOptions();
 loadWords();
 loadSettings();
+void loadSyncState();
 void loadCurrentSite();

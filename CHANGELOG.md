@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2026-11-13 (word list sync)
+
+- Added: a Sync section in the popup. Entering an activation code binds this browser to the sync service and merges the word list once; Sync now merges again on demand.
+- Added: a background worker syncs the word list shortly after it changes and once at browser startup. An expired device token clears activation, and the popup asks for the code again.
+
 ## 2026-11-13 (known-word list stored as one string)
 
 - Changed: the known-word list is stored as a single newline-joined string instead of a JSON array, matching the import and export file format. Existing word lists migrate to the new format on first load.

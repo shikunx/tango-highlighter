@@ -132,6 +132,18 @@
       </section>
 
       <section class="section">
+        <h2>Sync</h2>
+        <div class="input-container" id="syncActivateRow" hidden>
+          <input type="text" id="syncCodeInput" placeholder="Activation code" />
+          <button id="activateSyncBtn">Activate</button>
+        </div>
+        <div class="secondary-actions" id="syncActiveRow" hidden>
+          <button id="syncNowBtn">Sync now</button>
+        </div>
+        <div id="syncStatus"></div>
+      </section>
+
+      <section class="section">
         <div class="secondary-actions">
           <button id="importBtn">Import</button>
           <button id="exportBtn">Export</button>
@@ -147,6 +159,7 @@
     <script src="default-known-words.js"></script>
     <script src="search-engines.js"></script>
     <script src="storage.js"></script>
+    <script src="sync.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>
